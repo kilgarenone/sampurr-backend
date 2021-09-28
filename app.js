@@ -49,19 +49,28 @@ app.use(
 );
 
 app.get("/haha", async (req, res) => {
-  await execa("youtube-dl", [
-    "https://www.youtube.com/watch?v=bamxPYj0O9M",
-    "--prefer-ffmpeg",
-    "--extract-audio",
-    "--audio-format",
-    "mp3",
-    "--output",
-    path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
-  ]);
+  // await execa("youtube-dl", [
+  //   "https://www.youtube.com/watch?v=bamxPYj0O9M",
+  //   "--prefer-ffmpeg",
+  //   "--extract-audio",
+  //   "--audio-format",
+  //   "mp3",
+  //   "--output",
+  //   path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
+  // ]);
 
   const target = path.join(__dirname, "tmp", "bamxPYj0O9M.json");
 
-  await execa("audiowaveform", ["-i", "tmp/bamxPYj0O9M.mp3", "-o", target]);
+  // await execa("audiowaveform", [
+  //   "-i",
+  //   "tmp/bamxPYj0O9M.mp3",
+  //   "-o",
+  //   target,
+  //   "--bits",
+  //   8,
+  //   "--pixels-per-second",
+  //   20,
+  // ]);
 
   res.header("Content-Type", "application/json");
   res.sendFile(target);
