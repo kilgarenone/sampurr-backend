@@ -17,17 +17,18 @@ app.disable("x-powered-by");
 
 app.set("port", process.env.PORT || 4000);
 
-app.use(
-  express.urlencoded({
-    extended: true,
-  })
-);
+// app.use(
+//   express.urlencoded({
+//     extended: true,
+//   })
+// );
+app.use(express.json());
 
 app.use(express.static("tmp"));
 
 // url of your client
 const ALLOWED_ORIGINS = [
-  "http://localhost:8008" /* "https://example-prod-app.com */,
+  "http://localhost:8080" /* "https://example-prod-app.com */,
 ];
 
 app.use(
@@ -47,6 +48,31 @@ app.use(
     },
   })
 );
+
+app.post("/download", async (req, res) => {
+  const { start, end } = req.body;
+
+  const { stdout: url } = await execa("youtube-dl", [
+    "--get-url",
+    "https://www.youtube.com/watch?v=bamxPYj0O9M",
+  ]);
+
+  const haha = await execa("ffmpeg", [
+    "--ss",
+    "00:00:15.00",
+    "-i",
+    url,
+    "-to",
+    "00:00:20.00",
+    "-c",
+    "copy",
+    "out.mp3",
+  ]);
+
+  console.log("haha:", haha);
+  // console.log("url:", url);
+  res.send("url");
+});
 
 app.get("/haha", async (req, res) => {
   // await execa("youtube-dl", [
@@ -79,6 +105,7 @@ app.get("/haha", async (req, res) => {
 // central custom error handler
 // NOTE: DON"T REMOVE THE 'next'!!!!!
 app.use(function (err, req, res, next) {
+  console.log("err:", err);
   const error = createError(500, "Something went wrong. Alerted developer");
 
   res.status(error.status).json(error);
