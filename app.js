@@ -74,18 +74,47 @@ app.post("/download", async (req, res) => {
   res.send("url");
 });
 
-app.get("/haha", async (req, res) => {
-  // await execa("youtube-dl", [
-  //   "https://www.youtube.com/watch?v=bamxPYj0O9M",
-  //   "--prefer-ffmpeg",
-  //   "--extract-audio",
-  //   "--audio-format",
-  //   "mp3",
-  //   "--output",
-  //   path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
-  // ]);
+const progressRegex =
+  /\[download\] *(.*) of ([^ ]*)(:? *at *([^ ]*))?(:? *ETA *([^ ]*))?/;
 
-  const target = path.join(__dirname, "tmp", "bamxPYj0O9M.json");
+function getDownloadEvents(stringData) {
+  let outputLines = stringData.split(/\r|\n/g).filter(Boolean);
+  for (let outputLine of outputLines) {
+    if (outputLine[0] == "[") {
+      let progressMatch = outputLine.match(progressRegex);
+      if (progressMatch) {
+        let progressObject = {};
+        progressObject.percent = parseFloat(progressMatch[1].replace("%", ""));
+        progressObject.totalSize = progressMatch[2].replace("~", "");
+        progressObject.currentSpeed = progressMatch[4];
+        progressObject.eta = progressMatch[6];
+        console.log("progressObject:", progressObject);
+        // emitter.emit("progress", progressObject);
+      }
+    }
+  }
+}
+
+app.get("/haha", async (req, res) => {
+  const subprocess = execa("youtube-dl", [
+    "https://www.youtube.com/watch?v=bamxPYj0O9M",
+    "--prefer-ffmpeg",
+    "--extract-audio",
+    "--console-title",
+    "--audio-format",
+    "mp3",
+    "--output",
+    path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
+  ]);
+
+  subprocess.stdout.on("data", (data) => getDownloadEvents(data.toString()));
+
+  (async () => {
+    const { stdout } = await subprocess;
+    console.log("child output:", stdout);
+  })();
+
+  // const target = path.join(__dirname, "tmp", "bamxPYj0O9M.json");
 
   // await execa("audiowaveform", [
   //   "-i",
@@ -98,8 +127,9 @@ app.get("/haha", async (req, res) => {
   //   20, // try 25
   // ]);
 
-  res.header("Content-Type", "application/json");
-  res.sendFile(target);
+  // res.header("Content-Type", "application/json");
+  // res.sendFile(target);
+  res.sendStatus(200);
 });
 
 // central custom error handler
