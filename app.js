@@ -60,7 +60,6 @@ app.post("/download", async (req, res) => {
     "https://www.youtube.com/watch?v=bamxPYj0O9M",
   ]);
 
-  console.log("url:", url);
   const haha = await execa("ffmpeg", [
     "-ss",
     new Date(start * 1000).toISOString().substr(11, 11),
@@ -79,20 +78,22 @@ const progressRegex =
 
 function getDownloadEvents(stringData) {
   let outputLines = stringData.split(/\r|\n/g).filter(Boolean);
+  let progressObject = {};
+
   for (let outputLine of outputLines) {
     if (outputLine[0] == "[") {
       let progressMatch = outputLine.match(progressRegex);
       if (progressMatch) {
-        let progressObject = {};
         progressObject.percent = parseFloat(progressMatch[1].replace("%", ""));
         progressObject.totalSize = progressMatch[2].replace("~", "");
         progressObject.currentSpeed = progressMatch[4];
         progressObject.eta = progressMatch[6];
-        console.log("progressObject:", progressObject);
         // emitter.emit("progress", progressObject);
       }
     }
   }
+  return progressObject;
+  // console.log("progressObject:", progressObject);
 }
 
 app.get("/haha", async (req, res) => {
@@ -100,18 +101,21 @@ app.get("/haha", async (req, res) => {
     "https://www.youtube.com/watch?v=bamxPYj0O9M",
     "--prefer-ffmpeg",
     "--extract-audio",
-    "--console-title",
     "--audio-format",
     "mp3",
     "--output",
     path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
   ]);
 
-  subprocess.stdout.on("data", (data) => getDownloadEvents(data.toString()));
+  subprocess.stdout.on("data", (data) => {
+    const progress = getDownloadEvents(data.toString());
+    res.write(JSON.stringify(progress));
+    console.log("progress:", progress);
+  });
 
   (async () => {
     const { stdout } = await subprocess;
-    console.log("child output:", stdout);
+    res.end();
   })();
 
   // const target = path.join(__dirname, "tmp", "bamxPYj0O9M.json");
@@ -129,7 +133,7 @@ app.get("/haha", async (req, res) => {
 
   // res.header("Content-Type", "application/json");
   // res.sendFile(target);
-  res.sendStatus(200);
+  // res.sendStatus(200);
 });
 
 // central custom error handler
@@ -152,6 +156,7 @@ process.on("unhandledRejection", (reason, p) => {
 
 // mainly to catch those from third-party lib. for own code, catch it in try/catch
 process.on("uncaughtException", function (err) {
+  console.log("err:", err);
   process.exit(1);
 });
 
