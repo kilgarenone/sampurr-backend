@@ -63,11 +63,11 @@ app.post("/download", async (req, res) => {
   console.log("url:", url);
   const haha = await execa("ffmpeg", [
     "-ss",
-    "00:00:15.00",
+    new Date(start * 1000).toISOString().substr(11, 11),
     "-i",
     url,
     "-to",
-    "00:00:20.00",
+    new Date(end * 1000).toISOString().substr(11, 11),
     "out.wav",
   ]);
   // console.log("url:", url);
@@ -93,9 +93,9 @@ app.get("/haha", async (req, res) => {
   //   "-o",
   //   target,
   //   "--bits",
-  //   8,
+  //   8, // try 16
   //   "--pixels-per-second",
-  //   20,
+  //   20, // try 25
   // ]);
 
   res.header("Content-Type", "application/json");
