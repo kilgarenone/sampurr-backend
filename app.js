@@ -53,23 +53,23 @@ app.post("/download", async (req, res) => {
   const { start, end } = req.body;
 
   const { stdout: url } = await execa("youtube-dl", [
+    "--youtube-skip-dash-manifest",
     "--get-url",
+    "--format",
+    "bestaudio",
     "https://www.youtube.com/watch?v=bamxPYj0O9M",
   ]);
 
+  console.log("url:", url);
   const haha = await execa("ffmpeg", [
-    "--ss",
+    "-ss",
     "00:00:15.00",
     "-i",
     url,
     "-to",
     "00:00:20.00",
-    "-c",
-    "copy",
-    "out.mp3",
+    "out.wav",
   ]);
-
-  console.log("haha:", haha);
   // console.log("url:", url);
   res.send("url");
 });
@@ -112,6 +112,7 @@ app.use(function (err, req, res, next) {
 });
 
 process.on("unhandledRejection", (reason, p) => {
+  console.log("reason:", reason);
   // Error not caught in promises(ie. forgot the 'catch' block) will get swallowed and disappear.
   // I just caught an unhandled promise rejection,
   // since we already have fallback handler for unhandled errors (see below),
