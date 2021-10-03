@@ -50,8 +50,11 @@ app.use(
   })
 );
 
-app.post("/download", async (req, res) => {
-  const { start, end } = req.body;
+app.get("/download", async (req, res) => {
+  const { start, end, title } = req.query;
+
+  res.setHeader("Content-disposition", `attachment; filename=${title}.wav`);
+  res.setHeader("Content-type", "audio/wav");
 
   const { stdout: url } = await execa("youtube-dl", [
     "--youtube-skip-dash-manifest",
@@ -61,17 +64,35 @@ app.post("/download", async (req, res) => {
     "https://www.youtube.com/watch?v=bamxPYj0O9M",
   ]);
 
-  const haha = await execa("ffmpeg", [
+  // new Date(start * 1000).toISOString().substr(11, 11),
+  // new Date(end * 1000).toISOString().substr(11, 11),
+  const ffmpeg = execa("ffmpeg", [
     "-ss",
-    new Date(start * 1000).toISOString().substr(11, 11),
+    start,
     "-i",
     url,
     "-to",
-    new Date(end * 1000).toISOString().substr(11, 11),
-    "out.wav",
+    end,
+    // "-acodec",
+    // "pcm_s16le",
+    // "-ac",
+    // "2",
+    "-f",
+    "wav",
+    "-strict",
+    "-2",
+    // "-c",
+    // "copy",
+    "pipe:1",
   ]);
-  // console.log("url:", url);
-  res.send("url");
+
+  ffmpeg.stdout.pipe(res);
+
+  // error logging
+  ffmpeg.stderr.setEncoding("utf8");
+  ffmpeg.stderr.on("data", (data) => {
+    console.log(data);
+  });
 });
 
 const progressRegex =
@@ -118,7 +139,7 @@ app.get("/haha", async (req, res) => {
   //   "--prefer-ffmpeg",
   //   "--extract-audio",
   //   "--audio-format",
-  //   "mp3",
+  //   "wav",
   //   "--output",
   //   path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
   // ]);
@@ -132,11 +153,11 @@ app.get("/haha", async (req, res) => {
 
   // await subprocess;
 
-  const target = path.join(__dirname, "tmp", "bamxPYj0O9M.json");
+  const peaksFile = path.join(__dirname, "tmp", "bamxPYj0O9M.json");
 
   // await execa("audiowaveform", [
   //   "-i",
-  //   "tmp/bamxPYj0O9M.mp3",
+  //   "tmp/bamxPYj0O9M.wav",
   //   "-o",
   //   target,
   //   "--bits",
@@ -145,7 +166,7 @@ app.get("/haha", async (req, res) => {
   //   20, // try 25
   // ]);
 
-  fs.readFile(target, "utf8", (err, data) => {
+  fs.readFile(peaksFile, "utf8", (err, data) => {
     if (err) {
       console.error(`Error reading file from disk: ${err}`);
       res.end();
