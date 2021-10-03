@@ -4,6 +4,7 @@ const createError = require("http-errors");
 const fs = require("fs");
 const path = require("path");
 const execa = require("execa");
+const readline = require("readline");
 
 const app = express();
 
@@ -76,27 +77,42 @@ app.post("/download", async (req, res) => {
 const progressRegex =
   /\[download\] *(.*) of ([^ ]*)(:? *at *([^ ]*))?(:? *ETA *([^ ]*))?/;
 
-function getDownloadEvents(stringData) {
-  let outputLines = stringData.split(/\r|\n/g).filter(Boolean);
-  let progressObject = {};
+function getDownloadProgress(stringData) {
+  if (stringData[0] !== "[") return;
 
-  for (let outputLine of outputLines) {
-    if (outputLine[0] == "[") {
-      let progressMatch = outputLine.match(progressRegex);
-      if (progressMatch) {
-        progressObject.percent = parseFloat(progressMatch[1].replace("%", ""));
-        progressObject.totalSize = progressMatch[2].replace("~", "");
-        progressObject.currentSpeed = progressMatch[4];
-        progressObject.eta = progressMatch[6];
-        // emitter.emit("progress", progressObject);
-      }
-    }
-  }
+  const progressMatch = stringData.match(progressRegex);
+
+  if (!progressMatch) return;
+
+  const progressObject = {};
+
+  progressObject.percent = parseFloat(progressMatch[1].replace("%", ""));
+  progressObject.totalSize = progressMatch[2].replace("~", "");
+  progressObject.eta = progressMatch[6];
+
   return progressObject;
-  // console.log("progressObject:", progressObject);
 }
 
 app.get("/haha", async (req, res) => {
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+
+  const { stdout: mediaInfo } = await execa("youtube-dl", [
+    "https://www.youtube.com/watch?v=bamxPYj0O9M",
+    "--get-title",
+    "--get-thumbnail",
+    "--get-duration",
+  ]);
+
+  const [title, thumbnail, duration] = mediaInfo
+    .split(/\r|\n/g)
+    .filter(Boolean);
+
+  res.write(JSON.stringify({ title, thumbnail, duration }));
+
   const subprocess = execa("youtube-dl", [
     "https://www.youtube.com/watch?v=bamxPYj0O9M",
     "--prefer-ffmpeg",
@@ -107,16 +123,16 @@ app.get("/haha", async (req, res) => {
     path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
   ]);
 
-  subprocess.stdout.on("data", (data) => {
-    const progress = getDownloadEvents(data.toString());
-    res.write(JSON.stringify(progress));
-    console.log("progress:", progress);
+  const rl = readline.createInterface(subprocess.stdout);
+
+  rl.on("line", (input) => {
+    const progress = getDownloadProgress(input);
+    progress && res.write(JSON.stringify(progress));
   });
 
-  (async () => {
-    const { stdout } = await subprocess;
-    res.end();
-  })();
+  await subprocess;
+
+  res.end();
 
   // const target = path.join(__dirname, "tmp", "bamxPYj0O9M.json");
 
