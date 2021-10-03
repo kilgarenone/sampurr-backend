@@ -95,46 +95,44 @@ function getDownloadProgress(stringData) {
 
 app.get("/haha", async (req, res) => {
   res.writeHead(200, {
-    "Content-Type": "text/event-stream",
+    "Content-Type": "application/json",
     "Cache-Control": "no-cache",
     Connection: "keep-alive",
   });
 
-  const { stdout: mediaInfo } = await execa("youtube-dl", [
-    "https://www.youtube.com/watch?v=bamxPYj0O9M",
-    "--get-title",
-    "--get-thumbnail",
-    "--get-duration",
-  ]);
+  // const { stdout: mediaInfo } = await execa("youtube-dl", [
+  //   "https://www.youtube.com/watch?v=bamxPYj0O9M",
+  //   "--get-title",
+  //   "--get-thumbnail",
+  //   "--get-duration",
+  // ]);
 
-  const [title, thumbnail, duration] = mediaInfo
-    .split(/\r|\n/g)
-    .filter(Boolean);
+  // const [title, thumbnail, duration] = mediaInfo
+  //   .split(/\r|\n/g)
+  //   .filter(Boolean);
 
-  res.write(JSON.stringify({ title, thumbnail, duration }));
+  // res.write(JSON.stringify({ title, thumbnail, duration }));
 
-  const subprocess = execa("youtube-dl", [
-    "https://www.youtube.com/watch?v=bamxPYj0O9M",
-    "--prefer-ffmpeg",
-    "--extract-audio",
-    "--audio-format",
-    "mp3",
-    "--output",
-    path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
-  ]);
+  // const subprocess = execa("youtube-dl", [
+  //   "https://www.youtube.com/watch?v=bamxPYj0O9M",
+  //   "--prefer-ffmpeg",
+  //   "--extract-audio",
+  //   "--audio-format",
+  //   "mp3",
+  //   "--output",
+  //   path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
+  // ]);
 
-  const rl = readline.createInterface(subprocess.stdout);
+  // const rl = readline.createInterface(subprocess.stdout);
 
-  rl.on("line", (input) => {
-    const progress = getDownloadProgress(input);
-    progress && res.write(JSON.stringify(progress));
-  });
+  // rl.on("line", (input) => {
+  //   const progress = getDownloadProgress(input);
+  //   progress && res.write(JSON.stringify(progress));
+  // });
 
-  await subprocess;
+  // await subprocess;
 
-  res.end();
-
-  // const target = path.join(__dirname, "tmp", "bamxPYj0O9M.json");
+  const target = path.join(__dirname, "tmp", "bamxPYj0O9M.json");
 
   // await execa("audiowaveform", [
   //   "-i",
@@ -147,9 +145,16 @@ app.get("/haha", async (req, res) => {
   //   20, // try 25
   // ]);
 
-  // res.header("Content-Type", "application/json");
-  // res.sendFile(target);
-  // res.sendStatus(200);
+  fs.readFile(target, "utf8", (err, data) => {
+    if (err) {
+      console.error(`Error reading file from disk: ${err}`);
+      res.end();
+      return;
+    }
+
+    res.write(data);
+    res.end();
+  });
 });
 
 // central custom error handler
