@@ -51,43 +51,37 @@ app.use(
 );
 
 app.get("/download", async (req, res) => {
-  const { start, end, title } = req.query;
+  let { start, end, title } = req.query;
 
   res.setHeader("Content-disposition", `attachment; filename=${title}.wav`);
   res.setHeader("Content-type", "audio/wav");
 
-  const { stdout: url } = await execa("youtube-dl", [
-    "--youtube-skip-dash-manifest",
-    "--get-url",
-    "--format",
-    "bestaudio",
-    "https://www.youtube.com/watch?v=bamxPYj0O9M",
-  ]);
+  // const { stdout: url } = await execa("youtube-dl", [
+  //   "--youtube-skip-dash-manifest",
+  //   "--get-url",
+  //   "--format",
+  //   "bestaudio",
+  //   "https://www.youtube.com/watch?v=bamxPYj0O9M",
+  // ]);
 
-  // new Date(start * 1000).toISOString().substr(11, 11),
-  // new Date(end * 1000).toISOString().substr(11, 11),
+  // start = new Date(start * 1000).toISOString().substr(11, 11);
+  // end = new Date(end * 1000).toISOString().substr(11, 11);
+  const duration = end - start;
   const ffmpeg = execa("ffmpeg", [
+    "-i",
+    "tmp/bamxPYj0O9M.wav",
     "-ss",
     start,
-    "-i",
-    url,
     "-to",
     end,
-    // "-acodec",
-    // "pcm_s16le",
-    // "-ac",
-    // "2",
     "-f",
     "wav",
-    "-strict",
-    "-2",
-    // "-c",
-    // "copy",
     "pipe:1",
   ]);
 
   ffmpeg.stdout.pipe(res);
 
+  await ffmpeg;
   // error logging
   ffmpeg.stderr.setEncoding("utf8");
   ffmpeg.stderr.on("data", (data) => {
@@ -121,39 +115,41 @@ app.get("/haha", async (req, res) => {
     Connection: "keep-alive",
   });
 
-  // const { stdout: mediaInfo } = await execa("youtube-dl", [
-  //   "https://www.youtube.com/watch?v=bamxPYj0O9M",
-  //   "--get-title",
-  //   "--get-thumbnail",
-  //   "--get-duration",
-  // ]);
+  const { stdout: mediaInfo } = await execa("youtube-dl", [
+    "https://www.youtube.com/watch?v=bamxPYj0O9M",
+    "--get-title",
+    "--get-thumbnail",
+    "--get-duration",
+  ]);
 
-  // const [title, thumbnail, duration] = mediaInfo
-  //   .split(/\r|\n/g)
-  //   .filter(Boolean);
+  const [title, thumbnail, duration] = mediaInfo
+    .split(/\r|\n/g)
+    .filter(Boolean);
 
-  // res.write(JSON.stringify({ title, thumbnail, duration }));
+  res.write(JSON.stringify({ title, thumbnail, duration }));
 
-  // const subprocess = execa("youtube-dl", [
-  //   "https://www.youtube.com/watch?v=bamxPYj0O9M",
-  //   "--prefer-ffmpeg",
-  //   "--extract-audio",
-  //   "--audio-format",
-  //   "wav",
-  //   "--output",
-  //   path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
-  // ]);
+  const subprocess = execa("youtube-dl", [
+    "https://www.youtube.com/watch?v=bamxPYj0O9M",
+    "--prefer-ffmpeg",
+    "--extract-audio",
+    "--audio-format",
+    "wav",
+    "--output",
+    path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
+  ]);
 
-  // const rl = readline.createInterface(subprocess.stdout);
+  const rl = readline.createInterface(subprocess.stdout);
 
-  // rl.on("line", (input) => {
-  //   const progress = getDownloadProgress(input);
-  //   progress && res.write(JSON.stringify(progress));
-  // });
+  rl.on("line", (input) => {
+    const progress = getDownloadProgress(input);
+    progress && res.write(JSON.stringify(progress));
+  });
 
-  // await subprocess;
+  await subprocess;
 
-  const peaksFile = path.join(__dirname, "tmp", "bamxPYj0O9M.json");
+  const peaksFile = fs.createReadStream(
+    path.join(__dirname, "tmp", "bamxPYj0O9M.json")
+  );
 
   // await execa("audiowaveform", [
   //   "-i",
@@ -166,16 +162,17 @@ app.get("/haha", async (req, res) => {
   //   20, // try 25
   // ]);
 
-  fs.readFile(peaksFile, "utf8", (err, data) => {
-    if (err) {
-      console.error(`Error reading file from disk: ${err}`);
-      res.end();
-      return;
-    }
+  peaksFile.pipe(res);
+  // fs.readFile(peaksFile, "utf8", (err, data) => {
+  //   if (err) {
+  //     console.error(`Error reading file from disk: ${err}`);
+  //     res.end();
+  //     return;
+  //   }
 
-    res.write(data);
-    res.end();
-  });
+  //   res.write(data);
+  //   res.end();
+  // });
 });
 
 // central custom error handler
