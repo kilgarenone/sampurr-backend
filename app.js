@@ -56,17 +56,6 @@ app.get("/download", async (req, res) => {
   res.setHeader("Content-disposition", `attachment; filename=${title}.wav`);
   res.setHeader("Content-type", "audio/wav");
 
-  // const { stdout: url } = await execa("youtube-dl", [
-  //   "--youtube-skip-dash-manifest",
-  //   "--get-url",
-  //   "--format",
-  //   "bestaudio",
-  //   "https://www.youtube.com/watch?v=bamxPYj0O9M",
-  // ]);
-
-  // start = new Date(start * 1000).toISOString().substr(11, 11);
-  // end = new Date(end * 1000).toISOString().substr(11, 11);
-  const duration = end - start;
   const ffmpeg = execa("ffmpeg", [
     "-i",
     "tmp/bamxPYj0O9M.wav",
@@ -109,43 +98,43 @@ function getDownloadProgress(stringData) {
 }
 
 app.get("/haha", async (req, res) => {
-  res.writeHead(200, {
-    "Content-Type": "application/json",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive",
-  });
+  // res.writeHead(200, {
+  //   "Content-Type": "application/json",
+  //   "Cache-Control": "no-cache",
+  //   Connection: "keep-alive",
+  // });
 
-  const { stdout: mediaInfo } = await execa("youtube-dl", [
-    "https://www.youtube.com/watch?v=bamxPYj0O9M",
-    "--get-title",
-    "--get-thumbnail",
-    "--get-duration",
-  ]);
+  // const { stdout: mediaInfo } = await execa("youtube-dl", [
+  //   "https://www.youtube.com/watch?v=bamxPYj0O9M",
+  //   "--get-title",
+  //   "--get-thumbnail",
+  //   "--get-duration",
+  // ]);
 
-  const [title, thumbnail, duration] = mediaInfo
-    .split(/\r|\n/g)
-    .filter(Boolean);
+  // const [title, thumbnail, duration] = mediaInfo
+  //   .split(/\r|\n/g)
+  //   .filter(Boolean);
 
-  res.write(JSON.stringify({ title, thumbnail, duration }));
+  // res.write(JSON.stringify({ title, thumbnail, duration }));
 
-  const subprocess = execa("youtube-dl", [
-    "https://www.youtube.com/watch?v=bamxPYj0O9M",
-    "--prefer-ffmpeg",
-    "--extract-audio",
-    "--audio-format",
-    "wav",
-    "--output",
-    path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
-  ]);
+  // const subprocess = execa("youtube-dl", [
+  //   "https://www.youtube.com/watch?v=bamxPYj0O9M",
+  //   "--prefer-ffmpeg",
+  //   "--extract-audio",
+  //   "--audio-format",
+  //   "wav",
+  //   "--output",
+  //   path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
+  // ]);
 
-  const rl = readline.createInterface(subprocess.stdout);
+  // const rl = readline.createInterface(subprocess.stdout);
 
-  rl.on("line", (input) => {
-    const progress = getDownloadProgress(input);
-    progress && res.write(JSON.stringify(progress));
-  });
+  // rl.on("line", (input) => {
+  //   const progress = getDownloadProgress(input);
+  //   progress && res.write(JSON.stringify(progress));
+  // });
 
-  await subprocess;
+  // await subprocess;
 
   const peaksFile = fs.createReadStream(
     path.join(__dirname, "tmp", "bamxPYj0O9M.json")
@@ -163,16 +152,6 @@ app.get("/haha", async (req, res) => {
   // ]);
 
   peaksFile.pipe(res);
-  // fs.readFile(peaksFile, "utf8", (err, data) => {
-  //   if (err) {
-  //     console.error(`Error reading file from disk: ${err}`);
-  //     res.end();
-  //     return;
-  //   }
-
-  //   res.write(data);
-  //   res.end();
-  // });
 });
 
 // central custom error handler
