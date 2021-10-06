@@ -139,10 +139,6 @@ app.get("/waveform", async (req, res) => {
 
   await downloadAudioProcess;
 
-  // const peaksFile = fs.createReadStream(
-  //   path.join(__dirname, "tmp", "bamxPYj0O9M.json")
-  // );
-
   const waveformProcess = execa("audiowaveform", [
     "-i",
     `tmp/${id}.wav`,
