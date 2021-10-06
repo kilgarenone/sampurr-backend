@@ -97,61 +97,68 @@ function getDownloadProgress(stringData) {
   return progressObject;
 }
 
-app.get("/haha", async (req, res) => {
-  // res.writeHead(200, {
-  //   "Content-Type": "application/json",
-  //   "Cache-Control": "no-cache",
-  //   Connection: "keep-alive",
-  // });
+app.get("/waveform", async (req, res) => {
+  const { url } = req.query;
 
-  // const { stdout: mediaInfo } = await execa("youtube-dl", [
-  //   "https://www.youtube.com/watch?v=bamxPYj0O9M",
-  //   "--get-title",
-  //   "--get-thumbnail",
-  //   "--get-duration",
-  // ]);
+  res.writeHead(200, {
+    "Content-Type": "application/json",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
 
-  // const [title, thumbnail, duration] = mediaInfo
-  //   .split(/\r|\n/g)
-  //   .filter(Boolean);
+  const { stdout: mediaInfo } = await execa("youtube-dl", [
+    url,
+    "--get-title",
+    "--get-thumbnail",
+    "--get-duration",
+    "--get-id",
+  ]);
 
-  // res.write(JSON.stringify({ title, thumbnail, duration }));
+  const [title, id, thumbnail, duration] = mediaInfo
+    .split(/\r|\n/g)
+    .filter(Boolean);
 
-  // const subprocess = execa("youtube-dl", [
-  //   "https://www.youtube.com/watch?v=bamxPYj0O9M",
-  //   "--prefer-ffmpeg",
-  //   "--extract-audio",
-  //   "--audio-format",
-  //   "wav",
-  //   "--output",
-  //   path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
-  // ]);
+  res.write(JSON.stringify({ title, thumbnail, duration, id }));
 
-  // const rl = readline.createInterface(subprocess.stdout);
+  const downloadAudioProcess = execa("youtube-dl", [
+    url,
+    "--prefer-ffmpeg",
+    "--extract-audio",
+    "--audio-format",
+    "wav",
+    "--output",
+    path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
+  ]);
 
-  // rl.on("line", (input) => {
-  //   const progress = getDownloadProgress(input);
-  //   progress && res.write(JSON.stringify(progress));
-  // });
+  const rl = readline.createInterface(downloadAudioProcess.stdout);
 
-  // await subprocess;
+  rl.on("line", (input) => {
+    const progress = getDownloadProgress(input);
+    progress && res.write(JSON.stringify(progress));
+  });
 
-  const peaksFile = fs.createReadStream(
-    path.join(__dirname, "tmp", "bamxPYj0O9M.json")
-  );
+  await downloadAudioProcess;
 
-  // await execa("audiowaveform", [
-  //   "-i",
-  //   "tmp/bamxPYj0O9M.wav",
-  //   "-o",
-  //   target,
-  //   "--bits",
-  //   8, // try 16
-  //   "--pixels-per-second",
-  //   20, // try 25
-  // ]);
+  // const peaksFile = fs.createReadStream(
+  //   path.join(__dirname, "tmp", "bamxPYj0O9M.json")
+  // );
 
-  peaksFile.pipe(res);
+  const waveformProcess = execa("audiowaveform", [
+    "-i",
+    `tmp/${id}.wav`,
+    "-o",
+    "-", // output to stdout
+    "--bits",
+    8, // try 16
+    "--pixels-per-second",
+    20, // try 25
+    "--output-format",
+    "json",
+  ]);
+
+  waveformProcess.stdout.pipe(res);
+
+  await waveformProcess;
 });
 
 // central custom error handler
