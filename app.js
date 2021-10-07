@@ -90,7 +90,7 @@ function getDownloadProgress(stringData) {
 
   const progressObject = {};
 
-  progressObject.percent = parseFloat(progressMatch[1].replace("%", ""));
+  progressObject.percent = parseInt(progressMatch[1].replace("%", ""));
   progressObject.totalSize = progressMatch[2].replace("~", "");
   progressObject.eta = progressMatch[6];
 
@@ -100,11 +100,12 @@ function getDownloadProgress(stringData) {
 app.get("/waveform", async (req, res) => {
   const { url } = req.query;
 
-  res.writeHead(200, {
-    "Content-Type": "application/json",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive",
-  });
+  // res.writeHead(200, {
+  //   "Content-Type": "application/json",
+  //   "Cache-Control": "no-cache",
+  //   Connection: "keep-alive",
+  // });
+  res.setHeader("transfer-encoding", "chunked");
 
   const { stdout: mediaInfo } = await execa("youtube-dl", [
     url,
@@ -138,6 +139,8 @@ app.get("/waveform", async (req, res) => {
   });
 
   await downloadAudioProcess;
+
+  res.write(JSON.stringify({ status: "Generating waveform" }));
 
   const waveformProcess = execa("audiowaveform", [
     "-i",
