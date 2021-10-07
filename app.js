@@ -100,12 +100,14 @@ function getDownloadProgress(stringData) {
 app.get("/waveform", async (req, res) => {
   const { url } = req.query;
 
-  // res.writeHead(200, {
-  //   "Content-Type": "application/json",
-  //   "Cache-Control": "no-cache",
-  //   Connection: "keep-alive",
-  // });
-  res.setHeader("transfer-encoding", "chunked");
+  res.writeHead(200, {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Transfer-Encoding": "chunked",
+    "X-Content-Type-Options": "nosniff",
+  });
+  // res.setHeader("Connection", "Transfer-Encoding");
+  // res.setHeader("Transfer-Encoding", "chunked");
+  // res.setHeader("Content-Type", "application/json");
 
   const { stdout: mediaInfo } = await execa("youtube-dl", [
     url,
