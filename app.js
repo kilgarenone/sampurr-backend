@@ -124,6 +124,7 @@ app.get("/waveform", async (req, res) => {
 
   res.write(JSON.stringify({ title, thumbnail, duration, id }));
 
+  // TODO: skip if file already exists. to avoid 'ERROR: unable to rename file: [Errno 2] No such file or directory'
   const downloadAudioProcess = execa("youtube-dl", [
     url,
     "--prefer-ffmpeg",
