@@ -104,6 +104,7 @@ app.get("/waveform", async (req, res) => {
     "Content-Type": "text/plain; charset=utf-8",
     "Transfer-Encoding": "chunked",
     "X-Content-Type-Options": "nosniff",
+    "Cache-Control": "no-cache",
   });
   // res.setHeader("Connection", "Transfer-Encoding");
   // res.setHeader("Transfer-Encoding", "chunked");
@@ -123,30 +124,31 @@ app.get("/waveform", async (req, res) => {
 
   res.write(JSON.stringify({ title, thumbnail, duration, id }));
 
-  const downloadAudioProcess = execa("youtube-dl", [
-    url,
-    "--prefer-ffmpeg",
-    "--extract-audio",
-    "--audio-format",
-    "wav",
-    "--output",
-    path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
-  ]);
+  // const downloadAudioProcess = execa("youtube-dl", [
+  //   url,
+  //   "--prefer-ffmpeg",
+  //   "--extract-audio",
+  //   "--audio-format",
+  //   "wav",
+  //   "--output",
+  //   path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
+  // ]);
 
-  const rl = readline.createInterface(downloadAudioProcess.stdout);
+  // const rl = readline.createInterface(downloadAudioProcess.stdout);
 
-  rl.on("line", (input) => {
-    const progress = getDownloadProgress(input);
-    progress && res.write(JSON.stringify(progress));
-  });
+  // rl.on("line", (input) => {
+  //   const progress = getDownloadProgress(input);
+  //   progress && res.write(JSON.stringify(progress));
+  // });
 
-  await downloadAudioProcess;
+  // await downloadAudioProcess;
 
   res.write(JSON.stringify({ status: "Generating waveform" }));
 
   const waveformProcess = execa("audiowaveform", [
     "-i",
-    `tmp/${id}.wav`,
+    `tmp/${"4aeETEoNfOg"}.wav`,
+    // `tmp/${id}.wav`,
     "-o",
     "-", // output to stdout
     "--bits",
