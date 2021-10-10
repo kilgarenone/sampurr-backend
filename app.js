@@ -18,11 +18,6 @@ app.disable("x-powered-by");
 
 app.set("port", process.env.PORT || 4000);
 
-// app.use(
-//   express.urlencoded({
-//     extended: true,
-//   })
-// );
 app.use(express.json());
 
 app.use(express.static("tmp"));
@@ -97,6 +92,13 @@ function getDownloadProgress(stringData) {
   return progressObject;
 }
 
+function checkFileExists(file) {
+  return fs.promises
+    .access(file, fs.constants.F_OK)
+    .then(() => true)
+    .catch(() => false);
+}
+
 app.get("/waveform", async (req, res) => {
   const { url } = req.query;
 
@@ -106,9 +108,6 @@ app.get("/waveform", async (req, res) => {
     "X-Content-Type-Options": "nosniff",
     "Cache-Control": "no-cache",
   });
-  // res.setHeader("Connection", "Transfer-Encoding");
-  // res.setHeader("Transfer-Encoding", "chunked");
-  // res.setHeader("Content-Type", "application/json");
 
   const { stdout: mediaInfo } = await execa("youtube-dl", [
     url,
@@ -124,31 +123,41 @@ app.get("/waveform", async (req, res) => {
 
   res.write(JSON.stringify({ title, thumbnail, duration, id }));
 
-  // TODO: skip if file already exists. to avoid 'ERROR: unable to rename file: [Errno 2] No such file or directory'
-  const downloadAudioProcess = execa("youtube-dl", [
-    url,
-    "--prefer-ffmpeg",
-    "--extract-audio",
-    "--audio-format",
-    "wav",
-    "--output",
-    path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
-  ]);
+  const isFileExists = await checkFileExists(
+    path.join(__dirname, "tmp", `${id}.wav`)
+  );
+  console.log("isFileExists:", isFileExists);
 
-  const rl = readline.createInterface(downloadAudioProcess.stdout);
+  if (!isFileExists) {
+    const downloadAudioProcess = execa("youtube-dl", [
+      url,
+      "--prefer-ffmpeg",
+      "--extract-audio",
+      "--audio-format",
+      "wav",
+      "--output",
+      path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
+    ]);
 
-  rl.on("line", (input) => {
-    const progress = getDownloadProgress(input);
-    progress && res.write(JSON.stringify(progress));
-  });
+    const rl = readline.createInterface(downloadAudioProcess.stdout);
 
-  await downloadAudioProcess;
+    rl.on("line", (input) => {
+      const progress = getDownloadProgress(input);
+      progress && res.write(JSON.stringify(progress));
+    });
 
-  res.write(JSON.stringify({ status: "Generating waveform" }));
+    await downloadAudioProcess;
+  }
+
+  res.write(
+    JSON.stringify({
+      status: "Generating waveform",
+      ...(isFileExists ? { percent: "99" } : {}),
+    })
+  );
 
   const waveformProcess = execa("audiowaveform", [
     "-i",
-    // `tmp/${"4aeETEoNfOg"}.wav`,
     `tmp/${id}.wav`,
     "-o",
     "-", // output to stdout
