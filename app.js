@@ -123,29 +123,44 @@ app.get("/waveform", async (req, res) => {
     "--get-title",
     "--get-thumbnail",
     "--get-duration",
+    "--get-id",
   ]);
 
-  let trackID = await nanoid(11);
-  console.log("trackID:", trackID);
+  const tempId = await nanoid(5);
+  let trackID = "";
+  let tempFilePath = "";
+  let filePath = "";
 
   try {
     const { stdout: mediaInfo } = await getMediaInfoProcess;
 
-    const [title, thumbnail, duration] = mediaInfo
+    const [title, id, thumbnail, duration] = mediaInfo
       .split(/\r|\n/g)
       .filter(Boolean);
 
-    res.write(JSON.stringify({ title, thumbnail, duration, id: trackID }));
+    trackID = id;
+    tempFilePath = path.join(
+      __dirname,
+      "tmp",
+      `${trackID}_${tempId}`,
+      `${trackID}.wav`
+    );
+    filePath = path.join(__dirname, "tmp", `${trackID}`, `${trackID}.wav`);
+
+    res.write(JSON.stringify({ title, thumbnail, duration, id }));
   } catch (err) {
     console.log("err in getMediaInfoProcess:", err);
   }
 
-  const isFileExists = await checkFileExists(
-    path.join(__dirname, "tmp", `${trackID}.wav`)
-  );
+  const dirname = path.dirname(filePath);
+  const tempDirName = path.dirname(tempFilePath);
+  const isDirExists = await checkFileExists(dirname);
+  console.log("isDirExists:", isDirExists);
 
   try {
-    if (!isFileExists) {
+    if (!isDirExists) {
+      await fs.promises.mkdir(tempDirName, { recursive: true });
+
       downloadAudioProcess = execa("youtube-dl", [
         url,
         "--prefer-ffmpeg",
@@ -153,7 +168,7 @@ app.get("/waveform", async (req, res) => {
         "--audio-format",
         "wav",
         "--output",
-        path.join(__dirname, "tmp", `${trackID}.%(ext)s`),
+        tempFilePath,
       ]);
 
       const rl = readline.createInterface(downloadAudioProcess.stdout);
@@ -166,13 +181,24 @@ app.get("/waveform", async (req, res) => {
       await downloadAudioProcess;
     }
   } catch (err) {
-    console.log("err in downloadAudioProcess:", err);
+    console.log("tempDirName:", tempDirName);
+    fs.rm(tempDirName, { recursive: true, force: true }, function (err) {
+      if (err && err.code == "ENOENT") {
+        // file doens't exist
+        console.info("File doesn't exist, won't remove it.");
+      } else if (err) {
+        // other errors, e.g. maybe we don't have enough permission
+        console.error("Error occurred while trying to remove file", err);
+      } else {
+        console.info(`removed`);
+      }
+    });
   }
 
   // res.write(
   //   JSON.stringify({
   //     status: "Generating waveform",
-  //     ...(isFileExists ? { percent: "99" } : {}), // keep it in quotes cuz we in FE we split by `"}`
+  //     ...(isDirExists ? { percent: "99" } : {}), // keep it in quotes cuz we in FE we split by `"}`
   //   })
   // );
 
