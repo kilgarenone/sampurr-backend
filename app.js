@@ -101,6 +101,14 @@ function checkFileExists(file) {
 
 app.get("/waveform", async (req, res) => {
   const { url } = req.query;
+  let downloadAudioProcess;
+  let getMediaInfoProcess;
+
+  req.on("aborted", function () {
+    console.log("aborte");
+    getMediaInfoProcess && getMediaInfoProcess.cancel();
+    downloadAudioProcess && downloadAudioProcess.cancel();
+  });
 
   res.writeHead(200, {
     "Content-Type": "text/plain; charset=utf-8",
@@ -109,7 +117,7 @@ app.get("/waveform", async (req, res) => {
     "Cache-Control": "no-cache",
   });
 
-  const { stdout: mediaInfo } = await execa("youtube-dl", [
+  getMediaInfoProcess = execa("youtube-dl", [
     url,
     "--get-title",
     "--get-thumbnail",
@@ -117,61 +125,74 @@ app.get("/waveform", async (req, res) => {
     "--get-id",
   ]);
 
-  const [title, id, thumbnail, duration] = mediaInfo
-    .split(/\r|\n/g)
-    .filter(Boolean);
+  let mediaID = "";
 
-  res.write(JSON.stringify({ title, thumbnail, duration, id }));
+  try {
+    const { stdout: mediaInfo } = await getMediaInfoProcess;
 
-  const isFileExists = await checkFileExists(
-    path.join(__dirname, "tmp", `${id}.wav`)
-  );
-  console.log("isFileExists:", isFileExists);
+    const [title, id, thumbnail, duration] = mediaInfo
+      .split(/\r|\n/g)
+      .filter(Boolean);
 
-  if (!isFileExists) {
-    const downloadAudioProcess = execa("youtube-dl", [
-      url,
-      "--prefer-ffmpeg",
-      "--extract-audio",
-      "--audio-format",
-      "wav",
-      "--output",
-      path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
-    ]);
+    mediaID = id;
 
-    const rl = readline.createInterface(downloadAudioProcess.stdout);
-
-    rl.on("line", (input) => {
-      const progress = getDownloadProgress(input);
-      progress && res.write(JSON.stringify(progress));
-    });
-
-    await downloadAudioProcess;
+    res.write(JSON.stringify({ title, thumbnail, duration, id }));
+  } catch (err) {
+    console.log("err in getMediaInfoProcess:", err);
   }
 
-  res.write(
-    JSON.stringify({
-      status: "Generating waveform",
-      ...(isFileExists ? { percent: "99" } : {}),
-    })
+  const isFileExists = await checkFileExists(
+    path.join(__dirname, "tmp", `${mediaID}.wav`)
   );
 
-  const waveformProcess = execa("audiowaveform", [
-    "-i",
-    `tmp/${id}.wav`,
-    "-o",
-    "-", // output to stdout
-    "--bits",
-    8, // try 16
-    "--pixels-per-second",
-    20, // try 25
-    "--output-format",
-    "json",
-  ]);
+  try {
+    if (!isFileExists) {
+      downloadAudioProcess = execa("youtube-dl", [
+        url,
+        "--prefer-ffmpeg",
+        "--extract-audio",
+        "--audio-format",
+        "wav",
+        "--output",
+        path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
+      ]);
 
-  waveformProcess.stdout.pipe(res);
+      const rl = readline.createInterface(downloadAudioProcess.stdout);
 
-  await waveformProcess;
+      rl.on("line", (input) => {
+        const progress = getDownloadProgress(input);
+        progress && res.write(JSON.stringify(progress));
+      });
+
+      await downloadAudioProcess;
+    }
+  } catch (err) {
+    console.log("err in downloadAudioProcess:", err);
+  }
+
+  // res.write(
+  //   JSON.stringify({
+  //     status: "Generating waveform",
+  //     ...(isFileExists ? { percent: "99" } : {}), // keep it in quotes cuz we in FE we split by `"}`
+  //   })
+  // );
+
+  // const waveformProcess = execa("audiowaveform", [
+  //   "-i",
+  //   `tmp/${id}.wav`,
+  //   "-o",
+  //   "-", // output to stdout
+  //   "--bits",
+  //   8, // try 16
+  //   "--pixels-per-second",
+  //   20, // try 25
+  //   "--output-format",
+  //   "json",
+  // ]);
+
+  // waveformProcess.stdout.pipe(res);
+
+  // await waveformProcess;
 });
 
 // central custom error handler
