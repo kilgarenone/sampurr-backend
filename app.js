@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const execa = require("execa");
 const readline = require("readline");
+const { nanoid } = require("nanoid/async");
 
 const app = express();
 
@@ -122,27 +123,25 @@ app.get("/waveform", async (req, res) => {
     "--get-title",
     "--get-thumbnail",
     "--get-duration",
-    "--get-id",
   ]);
 
-  let mediaID = "";
+  let trackID = await nanoid(11);
+  console.log("trackID:", trackID);
 
   try {
     const { stdout: mediaInfo } = await getMediaInfoProcess;
 
-    const [title, id, thumbnail, duration] = mediaInfo
+    const [title, thumbnail, duration] = mediaInfo
       .split(/\r|\n/g)
       .filter(Boolean);
 
-    mediaID = id;
-
-    res.write(JSON.stringify({ title, thumbnail, duration, id }));
+    res.write(JSON.stringify({ title, thumbnail, duration, id: trackID }));
   } catch (err) {
     console.log("err in getMediaInfoProcess:", err);
   }
 
   const isFileExists = await checkFileExists(
-    path.join(__dirname, "tmp", `${mediaID}.wav`)
+    path.join(__dirname, "tmp", `${trackID}.wav`)
   );
 
   try {
@@ -154,7 +153,7 @@ app.get("/waveform", async (req, res) => {
         "--audio-format",
         "wav",
         "--output",
-        path.join(__dirname, "tmp", "%(id)s.%(ext)s"),
+        path.join(__dirname, "tmp", `${trackID}.%(ext)s`),
       ]);
 
       const rl = readline.createInterface(downloadAudioProcess.stdout);
