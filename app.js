@@ -148,15 +148,17 @@ app.get("/waveform", async (req, res) => {
     console.log("err in getMediaInfoProcess:", err);
   }
 
-  const isDirExists = await checkFileExists(filePath);
-  console.log("isDirExists:", isDirExists);
+  const isFileExists = await checkFileExists(filePath);
+  console.log("isFileExists:", isFileExists);
 
   try {
-    if (!isDirExists) {
+    if (!isFileExists) {
+      // TODO: maybe try -f bestaudio
       downloadAudioProcess = execa("youtube-dl", [
         url,
         "--prefer-ffmpeg",
-        "--extract-audio",
+        // "--rm-cache-dir", // to overcome 403 forbidden error
+        // "--download-archive", // to overcome 403 forbidden error
         "--audio-format",
         "wav",
         "--output",
@@ -171,38 +173,31 @@ app.get("/waveform", async (req, res) => {
       });
 
       await downloadAudioProcess;
+
+      await fs.promises.rename(tempFilePath, filePath);
     }
   } catch (err) {
+    // TODO: youtube-dl error will be here. handle them for client. ask for retry
     console.log("err in downloadAudioProcess", err);
     // Get the files as an array
-    const files = await fs.promises.readdir(tmpPath);
+    const files = await fs.promises.readdir(tmpPath, { withFileTypes: true });
 
     // Loop them all with the new for...of
     for (const file of files) {
-      // Get the full paths
-      // const path = path.join(tmpPath, file);
-      // const toPath = path.join(moveTo, file);
+      const id = file.name.split("_")[0];
 
-      // Stat the file to see if we have a file or dir
-      const stat = await fs.promises.stat(path.join(tmpPath, file));
-      console.log("stat:", stat);
-
-      // if (stat.isFile()) console.log("'%s' is a file.", fromPath);
-      // else if (stat.isDirectory())
-      //   console.log("'%s' is a directory.", fromPath);
-
-      // Now move async
-      // await fs.promises.rename(fromPath, toPath);
-
-      // Log because we're crazy
-      // console.log("Moved '%s'->'%s'", fromPath, toPath);
-    } // End for...of
+      if (id === trackID) {
+        fs.unlink(path.join(tmpPath, file.name), function (err) {
+          if (err) console.log("err in deleting temp files", err);
+        });
+      }
+    }
   }
 
   // res.write(
   //   JSON.stringify({
   //     status: "Generating waveform",
-  //     ...(isDirExists ? { percent: "99" } : {}), // keep it in quotes cuz we in FE we split by `"}`
+  //     ...(isFileExists ? { percent: "99" } : {}), // keep it in quotes cuz we in FE we split by `"}`
   //   })
   // );
 
