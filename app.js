@@ -130,6 +130,7 @@ app.get("/waveform", async (req, res) => {
   let trackID = "";
   let tempFilePath = "";
   let filePath = "";
+  const tmpPath = path.join(__dirname, "/tmp");
 
   try {
     const { stdout: mediaInfo } = await getMediaInfoProcess;
@@ -139,28 +140,19 @@ app.get("/waveform", async (req, res) => {
       .filter(Boolean);
 
     trackID = id;
-    tempFilePath = path.join(
-      __dirname,
-      "tmp",
-      `${trackID}_${tempId}`,
-      `${trackID}.wav`
-    );
-    filePath = path.join(__dirname, "tmp", `${trackID}`, `${trackID}.wav`);
+    tempFilePath = path.join(__dirname, "tmp", `${trackID}_${tempId}.wav`);
+    filePath = path.join(__dirname, "tmp", `${trackID}.wav`);
 
     res.write(JSON.stringify({ title, thumbnail, duration, id }));
   } catch (err) {
     console.log("err in getMediaInfoProcess:", err);
   }
 
-  const dirname = path.dirname(filePath);
-  const tempDirName = path.dirname(tempFilePath);
-  const isDirExists = await checkFileExists(dirname);
+  const isDirExists = await checkFileExists(filePath);
   console.log("isDirExists:", isDirExists);
 
   try {
     if (!isDirExists) {
-      await fs.promises.mkdir(tempDirName, { recursive: true });
-
       downloadAudioProcess = execa("youtube-dl", [
         url,
         "--prefer-ffmpeg",
@@ -181,18 +173,30 @@ app.get("/waveform", async (req, res) => {
       await downloadAudioProcess;
     }
   } catch (err) {
-    console.log("tempDirName:", tempDirName);
-    fs.rm(tempDirName, { recursive: true, force: true }, function (err) {
-      if (err && err.code == "ENOENT") {
-        // file doens't exist
-        console.info("File doesn't exist, won't remove it.");
-      } else if (err) {
-        // other errors, e.g. maybe we don't have enough permission
-        console.error("Error occurred while trying to remove file", err);
-      } else {
-        console.info(`removed`);
-      }
-    });
+    console.log("err in downloadAudioProcess", err);
+    // Get the files as an array
+    const files = await fs.promises.readdir(tmpPath);
+
+    // Loop them all with the new for...of
+    for (const file of files) {
+      // Get the full paths
+      // const path = path.join(tmpPath, file);
+      // const toPath = path.join(moveTo, file);
+
+      // Stat the file to see if we have a file or dir
+      const stat = await fs.promises.stat(path.join(tmpPath, file));
+      console.log("stat:", stat);
+
+      // if (stat.isFile()) console.log("'%s' is a file.", fromPath);
+      // else if (stat.isDirectory())
+      //   console.log("'%s' is a directory.", fromPath);
+
+      // Now move async
+      // await fs.promises.rename(fromPath, toPath);
+
+      // Log because we're crazy
+      // console.log("Moved '%s'->'%s'", fromPath, toPath);
+    } // End for...of
   }
 
   // res.write(
@@ -204,7 +208,7 @@ app.get("/waveform", async (req, res) => {
 
   // const waveformProcess = execa("audiowaveform", [
   //   "-i",
-  //   `tmp/${id}.wav`,
+  //   tempFilePath,
   //   "-o",
   //   "-", // output to stdout
   //   "--bits",
@@ -217,7 +221,11 @@ app.get("/waveform", async (req, res) => {
 
   // waveformProcess.stdout.pipe(res);
 
-  // await waveformProcess;
+  // try {
+  //   await waveformProcess;
+  // } catch (err) {
+  //   console.log("err in waveformProcess", err);
+  // }
 });
 
 // central custom error handler
