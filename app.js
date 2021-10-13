@@ -46,21 +46,23 @@ app.use(
   })
 );
 
+const tmpPath = path.join(__dirname, "/tmp");
+
 app.get("/download", async (req, res) => {
   let { start, end, title, id } = req.query;
 
-  res.setHeader("Content-disposition", `attachment; filename=${title}.wav`);
-  res.setHeader("Content-type", "audio/wav");
+  res.setHeader("Content-disposition", `attachment; filename=${title}.flac`);
+  res.setHeader("Content-type", "audio/flac");
 
   const ffmpeg = execa("ffmpeg", [
     "-i",
-    `tmp/${id}.wav`,
+    path.join(tmpPath, `${id}.flac`),
     "-ss",
     start,
     "-to",
     end,
     "-f",
-    "wav",
+    "flac",
     "pipe:1",
   ]);
 
@@ -130,7 +132,6 @@ app.get("/waveform", async (req, res) => {
   let trackID = "";
   let tempFilePath = "";
   let filePath = "";
-  const tmpPath = path.join(__dirname, "/tmp");
 
   try {
     const { stdout: mediaInfo } = await getMediaInfoProcess;
@@ -140,8 +141,8 @@ app.get("/waveform", async (req, res) => {
       .filter(Boolean);
 
     trackID = id;
-    tempFilePath = path.join(__dirname, "tmp", `${trackID}_${tempId}.wav`);
-    filePath = path.join(__dirname, "tmp", `${trackID}.wav`);
+    tempFilePath = path.join(__dirname, "tmp", `${trackID}_${tempId}.flac`);
+    filePath = path.join(__dirname, "tmp", `${trackID}.flac`);
 
     res.write(JSON.stringify({ title, thumbnail, duration, id }));
   } catch (err) {
@@ -157,12 +158,17 @@ app.get("/waveform", async (req, res) => {
       downloadAudioProcess = execa("youtube-dl", [
         url,
         "--prefer-ffmpeg",
+        // "--audio-quality",
+        // "0",
+        // "--format",
+        // "bestaudio/best",
+        "--extract-audio",
         // "--rm-cache-dir", // to overcome 403 forbidden error
         // "--download-archive", // to overcome 403 forbidden error
         "--audio-format",
-        "wav",
+        "flac",
         "--output",
-        tempFilePath,
+        path.join(tmpPath, `${trackID}_${tempId}.%(ext)s`),
       ]);
 
       const rl = readline.createInterface(downloadAudioProcess.stdout);
@@ -177,6 +183,9 @@ app.get("/waveform", async (req, res) => {
       await fs.promises.rename(tempFilePath, filePath);
     }
   } catch (err) {
+    if (!err.isCanceled && !err.killed) {
+      // TODO: ask client to try again
+    }
     // TODO: youtube-dl error will be here. handle them for client. ask for retry
     console.log("err in downloadAudioProcess", err);
     // Get the files as an array
@@ -184,9 +193,7 @@ app.get("/waveform", async (req, res) => {
 
     // Loop them all with the new for...of
     for (const file of files) {
-      const id = file.name.split("_")[0];
-
-      if (id === trackID) {
+      if (file.name.indexOf(`${trackID}_${tempId}`) === 0) {
         fs.unlink(path.join(tmpPath, file.name), function (err) {
           if (err) console.log("err in deleting temp files", err);
         });
@@ -194,33 +201,34 @@ app.get("/waveform", async (req, res) => {
     }
   }
 
-  // res.write(
-  //   JSON.stringify({
-  //     status: "Generating waveform",
-  //     ...(isFileExists ? { percent: "99" } : {}), // keep it in quotes cuz we in FE we split by `"}`
-  //   })
-  // );
+  res.write(
+    JSON.stringify({
+      status: "Generating waveform",
+      ...(isFileExists ? { percent: "99" } : {}), // keep it in quotes cuz we in FE we split by `"}`
+    })
+  );
+  // console.log("tempFilePath:", tempFilePath);
 
-  // const waveformProcess = execa("audiowaveform", [
-  //   "-i",
-  //   tempFilePath,
-  //   "-o",
-  //   "-", // output to stdout
-  //   "--bits",
-  //   8, // try 16
-  //   "--pixels-per-second",
-  //   20, // try 25
-  //   "--output-format",
-  //   "json",
-  // ]);
+  const waveformProcess = execa("audiowaveform", [
+    "-i",
+    filePath,
+    "-o",
+    "-", // output to stdout
+    "--bits",
+    8, // try 16
+    "--pixels-per-second",
+    20, // try 25
+    "--output-format",
+    "json",
+  ]);
 
-  // waveformProcess.stdout.pipe(res);
+  waveformProcess.stdout.pipe(res);
 
-  // try {
-  //   await waveformProcess;
-  // } catch (err) {
-  //   console.log("err in waveformProcess", err);
-  // }
+  try {
+    await waveformProcess;
+  } catch (err) {
+    console.log("err in waveformProcess", err);
+  }
 });
 
 // central custom error handler
