@@ -51,18 +51,18 @@ const tmpPath = path.join(__dirname, "/tmp");
 app.get("/download", async (req, res) => {
   let { start, end, title, id } = req.query;
 
-  res.setHeader("Content-disposition", `attachment; filename=${title}.flac`);
-  res.setHeader("Content-type", "audio/flac");
+  res.setHeader("Content-disposition", `attachment; filename=${title}.wav`);
+  res.setHeader("Content-type", "audio/wav");
 
   const ffmpeg = execa("ffmpeg", [
     "-i",
-    path.join(tmpPath, `${id}.flac`),
+    path.join(tmpPath, `${id}.wav`),
     "-ss",
     start,
     "-to",
     end,
     "-f",
-    "flac",
+    "wav",
     "pipe:1",
   ]);
 
@@ -141,8 +141,8 @@ app.get("/waveform", async (req, res) => {
       .filter(Boolean);
 
     trackID = id;
-    tempFilePath = path.join(__dirname, "tmp", `${trackID}_${tempId}.flac`);
-    filePath = path.join(__dirname, "tmp", `${trackID}.flac`);
+    tempFilePath = path.join(__dirname, "tmp", `${trackID}_${tempId}.wav`);
+    filePath = path.join(__dirname, "tmp", `${trackID}.wav`);
 
     res.write(JSON.stringify({ title, thumbnail, duration, id }));
   } catch (err) {
@@ -166,7 +166,7 @@ app.get("/waveform", async (req, res) => {
         // "--rm-cache-dir", // to overcome 403 forbidden error
         // "--download-archive", // to overcome 403 forbidden error
         "--audio-format",
-        "flac",
+        "wav",
         "--output",
         path.join(tmpPath, `${trackID}_${tempId}.%(ext)s`),
       ]);
