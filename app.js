@@ -120,7 +120,7 @@ app.get("/waveform", async (req, res) => {
     "Cache-Control": "no-cache",
   });
 
-  getMediaInfoProcess = execa("youtube-dl", [
+  getMediaInfoProcess = execa("yt-dlp", [
     url,
     "--get-title",
     "--get-thumbnail",
@@ -135,6 +135,7 @@ app.get("/waveform", async (req, res) => {
 
   try {
     const { stdout: mediaInfo } = await getMediaInfoProcess;
+    console.log("mediaInfo:", mediaInfo);
 
     const [title, id, thumbnail, duration] = mediaInfo
       .split(/\r|\n/g)
@@ -155,9 +156,8 @@ app.get("/waveform", async (req, res) => {
   try {
     if (!isFileExists) {
       // TODO: maybe try -f bestaudio
-      downloadAudioProcess = execa("youtube-dl", [
+      downloadAudioProcess = execa("yt-dlp", [
         url,
-        "--prefer-ffmpeg",
         // "--audio-quality",
         // "0",
         // "--format",
