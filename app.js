@@ -1,15 +1,17 @@
-const express = require("express");
-const cors = require("cors");
-const createError = require("http-errors");
-const fs = require("fs");
-const path = require("path");
-const execa = require("execa");
-const readline = require("readline");
-const { nanoid } = require("nanoid/async");
+import express from "express";
+import cors from "cors";
+import createError from "http-errors";
+import fs from "fs";
+import path from "path";
+import execa from "execa";
+import readline from "readline";
+import { nanoid } from "nanoid/async";
+import { checkFileExists, getDownloadProgress } from "./functions.js";
 
 const app = express();
-
 const isProduction = app.get("env") === "production";
+// to fix 'ReferenceError: __dirname is not defined in ES module scope'
+const __dirname = path.resolve();
 
 if (isProduction) {
   app.set("trust proxy", 1);
@@ -76,36 +78,15 @@ app.get("/download", async (req, res) => {
   });
 });
 
-const progressRegex =
-  /\[download\] *(.*) of ([^ ]*)(:? *at *([^ ]*))?(:? *ETA *([^ ]*))?/;
-
-function getDownloadProgress(stringData) {
-  if (stringData[0] !== "[") return;
-
-  const progressMatch = stringData.match(progressRegex);
-
-  if (!progressMatch) return;
-
-  const progressObject = {};
-
-  progressObject.percent = parseInt(progressMatch[1].replace("%", ""));
-  progressObject.totalSize = progressMatch[2].replace("~", "");
-  progressObject.eta = progressMatch[6];
-
-  return progressObject;
-}
-
-function checkFileExists(file) {
-  return fs.promises
-    .access(file, fs.constants.F_OK)
-    .then(() => true)
-    .catch(() => false);
-}
-
 app.get("/waveform", async (req, res) => {
   const { url } = req.query;
+  const tempId = await nanoid(5);
+
   let downloadAudioProcess;
   let getMediaInfoProcess;
+  let trackID = "";
+  let tempFilePath = "";
+  let filePath = "";
 
   req.on("aborted", function () {
     console.log("aborte");
@@ -128,11 +109,6 @@ app.get("/waveform", async (req, res) => {
     "--get-id",
   ]);
 
-  const tempId = await nanoid(5);
-  let trackID = "";
-  let tempFilePath = "";
-  let filePath = "";
-
   try {
     const { stdout: mediaInfo } = await getMediaInfoProcess;
     console.log("mediaInfo:", mediaInfo);
@@ -151,7 +127,6 @@ app.get("/waveform", async (req, res) => {
   }
 
   const isFileExists = await checkFileExists(filePath);
-  console.log("isFileExists:", isFileExists);
 
   try {
     if (!isFileExists) {
@@ -160,11 +135,7 @@ app.get("/waveform", async (req, res) => {
         url,
         // "--audio-quality",
         // "0",
-        // "--format",
-        // "bestaudio/best",
         "--extract-audio",
-        // "--rm-cache-dir", // to overcome 403 forbidden error
-        // "--download-archive", // to overcome 403 forbidden error
         "--audio-format",
         "wav",
         "--output",
@@ -207,7 +178,6 @@ app.get("/waveform", async (req, res) => {
       ...(isFileExists ? { percent: "99" } : {}), // keep it in quotes cuz we in FE we split by `"}`
     })
   );
-  // console.log("tempFilePath:", tempFilePath);
 
   const waveformProcess = execa("audiowaveform", [
     "-i",
@@ -255,4 +225,4 @@ process.on("uncaughtException", function (err) {
   process.exit(1);
 });
 
-module.exports = app;
+export default app;
