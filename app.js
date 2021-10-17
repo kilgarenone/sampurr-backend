@@ -77,6 +77,9 @@ app.get("/download", async (req, res) => {
   }
 });
 
+const SOMETHING_WENT_WRONG_ERROR_TEMPLATE = `<p>Something went wrong</p><p class="error-desc">Refresh your browser to try again</p>`;
+const FILE_TOO_BIG_ERROR_TEMPLATE = `<p>Wow it's so big</p><p class="error-desc">Try an upload that's less than 10 minutes long</p>`;
+
 app.get("/waveform", async (req, res, next) => {
   const { url } = req.query;
   const tempId = await nanoid(5);
@@ -117,6 +120,15 @@ app.get("/waveform", async (req, res, next) => {
       .split(/\r|\n/g)
       .filter(Boolean);
 
+    // restrict media duration to less than 10 minutes
+    const durationArr = duration.split(":");
+
+    if (durationArr.length > 2 || durationArr[0] >= 10) {
+      return res.end(
+        JSON.stringify({ errorMessage: FILE_TOO_BIG_ERROR_TEMPLATE })
+      );
+    }
+
     trackID = id;
     tempFilePath = path.join(__dirname, "tmp", `${trackID}_${tempId}.wav`);
     filePath = path.join(__dirname, "tmp", `${trackID}.wav`);
@@ -124,7 +136,11 @@ app.get("/waveform", async (req, res, next) => {
     res.write(JSON.stringify({ title, thumbnail, duration, id }));
   } catch (err) {
     if (!err.isCanceled) {
-      return res.end(JSON.stringify({ errorCode: "400" }));
+      return res.end(
+        JSON.stringify({
+          errorMessage: SOMETHING_WENT_WRONG_ERROR_TEMPLATE,
+        })
+      );
     }
     return res.end();
   }
@@ -158,7 +174,11 @@ app.get("/waveform", async (req, res, next) => {
     }
   } catch (err) {
     if (!err.isCanceled) {
-      return res.end(JSON.stringify({ errorCode: "400" }));
+      return res.end(
+        JSON.stringify({
+          errorMessage: SOMETHING_WENT_WRONG_ERROR_TEMPLATE,
+        })
+      );
     }
 
     const files = await fs.promises.readdir(tmpPath, { withFileTypes: true });
@@ -200,7 +220,11 @@ app.get("/waveform", async (req, res, next) => {
     await waveformProcess;
   } catch (err) {
     if (!err.isCanceled) {
-      return res.end(JSON.stringify({ errorCode: "400" }));
+      return res.end(
+        JSON.stringify({
+          errorMessage: SOMETHING_WENT_WRONG_ERROR_TEMPLATE,
+        })
+      );
     }
 
     res.end();
