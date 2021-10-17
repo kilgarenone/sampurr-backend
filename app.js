@@ -1,11 +1,11 @@
 import express from "express";
 import cors from "cors";
-import createError from "http-errors";
 import fs from "fs";
 import path from "path";
 import execa from "execa";
 import readline from "readline";
 import { nanoid } from "nanoid/async";
+
 import { checkFileExists, getDownloadProgress } from "./functions.js";
 
 const app = express();
@@ -51,7 +51,7 @@ app.use(
 const tmpPath = path.join(__dirname, "/tmp");
 
 app.get("/download", async (req, res) => {
-  let { start, end, title, id } = req.query;
+  const { start, end, title, id } = req.query;
 
   res.setHeader("Content-disposition", `attachment; filename=${title}.wav`);
   res.setHeader("Content-type", "audio/wav");
@@ -70,28 +70,28 @@ app.get("/download", async (req, res) => {
 
   ffmpeg.stdout.pipe(res);
 
-  await ffmpeg;
-  // error logging
-  ffmpeg.stderr.setEncoding("utf8");
-  ffmpeg.stderr.on("data", (data) => {
-    console.log(data);
-  });
+  try {
+    await ffmpeg;
+  } catch (error) {
+    // TODO: log error
+  }
 });
 
-app.get("/waveform", async (req, res) => {
+app.get("/waveform", async (req, res, next) => {
   const { url } = req.query;
   const tempId = await nanoid(5);
 
   let downloadAudioProcess;
   let getMediaInfoProcess;
+  let waveformProcess;
   let trackID = "";
   let tempFilePath = "";
   let filePath = "";
 
   req.on("aborted", function () {
-    console.log("aborte");
     getMediaInfoProcess && getMediaInfoProcess.cancel();
     downloadAudioProcess && downloadAudioProcess.cancel();
+    waveformProcess && waveformProcess.cancel();
   });
 
   res.writeHead(200, {
@@ -112,7 +112,6 @@ app.get("/waveform", async (req, res) => {
 
   try {
     const { stdout: mediaInfo } = await getMediaInfoProcess;
-    console.log("mediaInfo:", mediaInfo);
 
     const [title, id, thumbnail, duration] = mediaInfo
       .split(/\r|\n/g)
@@ -124,7 +123,10 @@ app.get("/waveform", async (req, res) => {
 
     res.write(JSON.stringify({ title, thumbnail, duration, id }));
   } catch (err) {
-    console.log("err in getMediaInfoProcess:", err);
+    if (!err.isCanceled) {
+      return res.end(JSON.stringify({ errorCode: "400" }));
+    }
+    return res.end();
   }
 
   const isFileExists = await checkFileExists(filePath);
@@ -155,22 +157,21 @@ app.get("/waveform", async (req, res) => {
       await fs.promises.rename(tempFilePath, filePath);
     }
   } catch (err) {
-    if (!err.isCanceled && !err.killed) {
-      // TODO: ask client to try again
+    if (!err.isCanceled) {
+      return res.end(JSON.stringify({ errorCode: "400" }));
     }
-    // TODO: youtube-dl error will be here. handle them for client. ask for retry
-    console.log("err in downloadAudioProcess", err);
-    // Get the files as an array
+
     const files = await fs.promises.readdir(tmpPath, { withFileTypes: true });
 
-    // Loop them all with the new for...of
     for (const file of files) {
-      if (file.name.indexOf(`${trackID}_${tempId}`) === 0) {
+      if (file.name.indexOf(`${trackID}_${tempId}`) > -1) {
         fs.unlink(path.join(tmpPath, file.name), function (err) {
           if (err) console.log("err in deleting temp files", err);
         });
       }
     }
+
+    return res.end();
   }
 
   res.write(
@@ -180,7 +181,7 @@ app.get("/waveform", async (req, res) => {
     })
   );
 
-  const waveformProcess = execa("audiowaveform", [
+  waveformProcess = execa("audiowaveform", [
     "-i",
     filePath,
     "-o",
@@ -198,21 +199,15 @@ app.get("/waveform", async (req, res) => {
   try {
     await waveformProcess;
   } catch (err) {
-    console.log("err in waveformProcess", err);
+    if (!err.isCanceled) {
+      return res.end(JSON.stringify({ errorCode: "400" }));
+    }
+
+    res.end();
   }
 });
 
-// central custom error handler
-// NOTE: DON"T REMOVE THE 'next'!!!!!
-app.use(function (err, req, res, next) {
-  console.log("err:", err);
-  const error = createError(500, "Something went wrong. Alerted developer");
-
-  res.status(error.status).json(error);
-});
-
 process.on("unhandledRejection", (reason, p) => {
-  console.log("reason:", reason);
   // Error not caught in promises(ie. forgot the 'catch' block) will get swallowed and disappear.
   // I just caught an unhandled promise rejection,
   // since we already have fallback handler for unhandled errors (see below),
@@ -222,7 +217,6 @@ process.on("unhandledRejection", (reason, p) => {
 
 // mainly to catch those from third-party lib. for own code, catch it in try/catch
 process.on("uncaughtException", function (err) {
-  console.log("err:", err);
   process.exit(1);
 });
 
