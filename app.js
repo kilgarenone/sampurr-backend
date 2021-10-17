@@ -95,10 +95,11 @@ app.get("/waveform", async (req, res) => {
   });
 
   res.writeHead(200, {
-    "Content-Type": "text/plain; charset=utf-8",
+    "Content-Type": "text/json",
     "Transfer-Encoding": "chunked",
     "X-Content-Type-Options": "nosniff",
     "Cache-Control": "no-cache",
+    "Content-Encoding": "none",
   });
 
   getMediaInfoProcess = execa("yt-dlp", [
