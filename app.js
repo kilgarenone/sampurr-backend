@@ -80,7 +80,12 @@ app.get("/download", async (req, res) => {
 const SOMETHING_WENT_WRONG_ERROR_TEMPLATE = `<p>Something went wrong</p><p class="error-desc">Refresh your browser to try again</p>`;
 const FILE_TOO_BIG_ERROR_TEMPLATE = `<p>Wow it's so big</p><p class="error-desc">Try an upload that's less than 10 minutes long</p>`;
 
-app.get("/waveform", async (req, res, next) => {
+// health check
+app.get("/sup", (req, res) => {
+  res.send("sup");
+});
+
+app.get("/waveform", async (req, res) => {
   const { url } = req.query;
   const tempId = await nanoid(5);
 
