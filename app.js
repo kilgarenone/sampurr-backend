@@ -27,7 +27,7 @@ app.use(express.static("tmp"));
 
 // url of your client
 const ALLOWED_ORIGINS = [
-  "http://localhost:8080" /* "https://example-prod-app.com */,
+  "http://localhost:8008" /* "https://example-prod-app.com */,
 ];
 
 app.use(
