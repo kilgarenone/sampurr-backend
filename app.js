@@ -108,6 +108,7 @@ app.get("/waveform", async (req, res) => {
     "X-Content-Type-Options": "nosniff",
     "Cache-Control": "no-cache",
     "Content-Encoding": "none",
+    Connection: "keep-alive",
   });
 
   getMediaInfoProcess = execa("yt-dlp", [
