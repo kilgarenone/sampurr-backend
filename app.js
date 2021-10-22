@@ -103,11 +103,9 @@ app.get("/waveform", async (req, res) => {
   });
 
   res.writeHead(200, {
-    "Content-Type": "text/json",
-    "Transfer-Encoding": "chunked",
-    "X-Content-Type-Options": "nosniff",
+    "Content-Type": "text/event-stream",
+    "X-Accel-Buffering": "no",
     "Cache-Control": "no-cache",
-    "Content-Encoding": "none",
     Connection: "keep-alive",
   });
 
