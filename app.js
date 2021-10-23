@@ -144,6 +144,7 @@ app.get("/waveform", async (req, res) => {
       return res.end(
         JSON.stringify({
           errorMessage: SOMETHING_WENT_WRONG_ERROR_TEMPLATE,
+          error: err,
         })
       );
     }
@@ -182,6 +183,7 @@ app.get("/waveform", async (req, res) => {
       return res.end(
         JSON.stringify({
           errorMessage: SOMETHING_WENT_WRONG_ERROR_TEMPLATE,
+          error: err,
         })
       );
     }
@@ -228,6 +230,7 @@ app.get("/waveform", async (req, res) => {
       return res.end(
         JSON.stringify({
           errorMessage: SOMETHING_WENT_WRONG_ERROR_TEMPLATE,
+          error: err,
         })
       );
     }
