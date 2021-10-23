@@ -182,8 +182,7 @@ app.get("/waveform", async (req, res) => {
     if (!err.isCanceled) {
       return res.end(
         JSON.stringify({
-          errorMessage: SOMETHING_WENT_WRONG_ERROR_TEMPLATE,
-          error: err,
+          errorMessage: SOMETHING_WENT_WRONG_ERROR_TEMPLATE(err.stderr),
         })
       );
     }
@@ -229,8 +228,7 @@ app.get("/waveform", async (req, res) => {
     if (!err.isCanceled) {
       return res.end(
         JSON.stringify({
-          errorMessage: SOMETHING_WENT_WRONG_ERROR_TEMPLATE,
-          error: err,
+          errorMessage: SOMETHING_WENT_WRONG_ERROR_TEMPLATE(err.stderr),
         })
       );
     }
