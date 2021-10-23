@@ -1,7 +1,9 @@
-module.exports = {
-  apps : [{
-    name   : "sampurr",
-    script : "./server.js",
-    exec_mode: "cluster"
-  }]
-}
+export default {
+  apps: [
+    {
+      name: "sampurr",
+      script: "./server.js",
+      exec_mode: "cluster",
+    },
+  ],
+};
