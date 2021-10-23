@@ -77,7 +77,8 @@ app.get("/download", async (req, res) => {
   }
 });
 
-const SOMETHING_WENT_WRONG_ERROR_TEMPLATE = `<p>Something went wrong</p><p class="error-desc">Refresh your browser to try again</p>`;
+const SOMETHING_WENT_WRONG_ERROR_TEMPLATE = (msg) =>
+  `<p>Something went wrong</p><p class="error-desc">${msg}</p>`;
 const FILE_TOO_BIG_ERROR_TEMPLATE = `<p>Wow it's so big</p><p class="error-desc">Try an upload that's less than 10 minutes long</p>`;
 
 // health check
@@ -143,8 +144,7 @@ app.get("/waveform", async (req, res) => {
     if (!err.isCanceled) {
       return res.end(
         JSON.stringify({
-          errorMessage: SOMETHING_WENT_WRONG_ERROR_TEMPLATE,
-          error: err,
+          errorMessage: SOMETHING_WENT_WRONG_ERROR_TEMPLATE(err.stderr),
         })
       );
     }
