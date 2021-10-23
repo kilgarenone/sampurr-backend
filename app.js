@@ -175,7 +175,7 @@ app.get("/waveform", async (req, res) => {
       });
 
       await downloadAudioProcess;
-      // throw new Error("ahah");
+
       await fs.rename(tempFilePath, filePath);
     }
   } catch (err) {
