@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import fs from "fs";
+import { promises as fs } from "fs";
 import path from "path";
 import execa from "execa";
 import readline from "readline";
@@ -175,8 +175,8 @@ app.get("/waveform", async (req, res) => {
       });
 
       await downloadAudioProcess;
-
-      await fs.promises.rename(tempFilePath, filePath);
+      // throw new Error("ahah");
+      await fs.rename(tempFilePath, filePath);
     }
   } catch (err) {
     if (!err.isCanceled) {
@@ -187,15 +187,16 @@ app.get("/waveform", async (req, res) => {
       );
     }
 
-    const files = await fs.promises.readdir(tmpPath, { withFileTypes: true });
+    const files = await fs.readdir(tmpPath);
 
-    for (const file of files) {
-      if (file.name.indexOf(`${trackID}_${tempId}`) > -1) {
-        fs.unlink(path.join(tmpPath, file.name), function (err) {
-          if (err) console.log("err in deleting temp files", err);
-        });
+    const filesToBeDeleted = files.map(async (file) => {
+      if (file.indexOf(`${trackID}_${tempId}`) > -1) {
+        return fs.unlink(path.join(tmpPath, file));
       }
-    }
+      return;
+    });
+
+    await Promise.all(filesToBeDeleted);
 
     return res.end();
   }
@@ -203,7 +204,7 @@ app.get("/waveform", async (req, res) => {
   res.write(
     JSON.stringify({
       status: "Generating waveform",
-      ...(isFileExists ? { percent: "99" } : {}), // keep it in quotes cuz we in FE we split by `"}`
+      ...(isFileExists ? { percent: "95" } : {}), // keep it in quotes cuz we in FE we split by `"}`
     })
   );
 

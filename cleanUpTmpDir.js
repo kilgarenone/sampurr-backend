@@ -4,15 +4,6 @@ import path from "path";
 const __dirname = path.resolve();
 const tmpPath = path.join(__dirname, "/tmp");
 
-async function dirSize(directory) {
-  const files = await fs.readdir(directory);
-  const stats = await Promise.all(
-    files.map((file) => fs.stat(path.join(directory, file)))
-  );
-
-  return stats.reduce((accumulator, { size }) => accumulator + size, 0);
-}
-
 // source: https://stackoverflow.com/a/18650828/73323
 function formatBytes(bytes, decimals = 2) {
   if (bytes === 0) return "0 Bytes";
@@ -26,38 +17,45 @@ function formatBytes(bytes, decimals = 2) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
 }
 
-try {
-  const size = await dirSize(tmpPath);
-  console.log("total size of tmp directory", formatBytes(size));
-} catch (error) {
-  console.error("error in when calcualting total directory size", error);
+async function dirSize(directory) {
+  const files = await fs.readdir(directory);
+  const stats = await Promise.all(
+    files.map((file) => fs.stat(path.join(directory, file)))
+  );
+
+  return stats.reduce((accumulator, { size }) => accumulator + size, 0);
 }
 
 async function removeFileBasedOnFileAge(directory) {
   const now = new Date().getTime();
-  console.log("now:", now);
 
   const files = await fs.readdir(directory);
 
   const stats = files.map(async (file) => {
     const filePath = path.join(directory, file);
 
-    const { mtime } = await fs.stat(filePath);
+    const { birthtimeMs } = await fs.stat(filePath);
 
-    let endTime = new Date(mtime).getTime(); // 5 days in miliseconds
-    console.log("endTime:", endTime);
+    // only delete files that are 10 days old (fact: 1 day in millisecond is 86400000)
+    const endTime = birthtimeMs + 10 * 86400000;
 
-    console.log("endTime2:", endTime + 432000000);
-
-    // if (now > endTime) {
-    //   return fs.unlink(filePath);
-    // }
+    if (now > endTime) {
+      return fs.unlink(filePath);
+    }
 
     return;
   });
 
   return Promise.all(stats);
 }
-// if (size > 1073741824) {
-await removeFileBasedOnFileAge(tmpPath);
-// }
+
+try {
+  const size = await dirSize(tmpPath);
+  console.log("total size of tmp directory", formatBytes(size));
+  // clean up if occupied space is more than 1GB
+  if (size > 1073741824) {
+    await removeFileBasedOnFileAge(tmpPath);
+  }
+} catch (error) {
+  console.error("error during clean up", error);
+}
