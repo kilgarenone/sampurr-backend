@@ -107,7 +107,7 @@ app.get("/waveform", async (req, res) => {
     "Content-Type": "application/json",
     "X-Accel-Buffering": "no", // this is the key for streaming response with NginX!!
     "Cache-Control": "no-cache",
-    "Content-Encoding": "none",
+    // "Content-Encoding": "none",
     Connection: "keep-alive",
   });
 
