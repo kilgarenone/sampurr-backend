@@ -107,8 +107,6 @@ app.get("/waveform", async (req, res) => {
     "Content-Type": "application/json",
     "X-Accel-Buffering": "no", // this is the key for streaming response with NginX!!
     // "Cache-Control": "no-cache",
-    // "Content-Encoding": "none",
-    // Connection: "keep-alive",
   });
 
   getMediaInfoProcess = execa("yt-dlp", [
@@ -141,6 +139,7 @@ app.get("/waveform", async (req, res) => {
 
     res.write(JSON.stringify({ title, thumbnail, duration, id }));
   } catch (err) {
+    console.error(err);
     if (!err.isCanceled) {
       return res.end(
         JSON.stringify({
