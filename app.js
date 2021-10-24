@@ -140,6 +140,7 @@ app.get("/waveform", async (req, res) => {
     res.write(JSON.stringify({ title, thumbnail, duration, id }));
   } catch (err) {
     console.error(err);
+
     if (!err.isCanceled) {
       return res.end(
         JSON.stringify({
@@ -178,6 +179,8 @@ app.get("/waveform", async (req, res) => {
       await fs.rename(tempFilePath, filePath);
     }
   } catch (err) {
+    console.error(err);
+
     if (!err.isCanceled) {
       return res.end(
         JSON.stringify({
@@ -225,6 +228,8 @@ app.get("/waveform", async (req, res) => {
   try {
     await waveformProcess;
   } catch (err) {
+    console.error(err);
+
     if (!err.isCanceled) {
       return res.end(
         JSON.stringify({
@@ -238,7 +243,7 @@ app.get("/waveform", async (req, res) => {
 });
 
 process.on("unhandledRejection", (reason, p) => {
-  console.log("reason:", reason);
+  console.error("unhandledRejection", reason);
   // Error not caught in promises(ie. forgot the 'catch' block) will get swallowed and disappear.
   // I just caught an unhandled promise rejection,
   // since we already have fallback handler for unhandled errors (see below),
@@ -248,7 +253,7 @@ process.on("unhandledRejection", (reason, p) => {
 
 // mainly to catch those from third-party lib. for own code, catch it in try/catch
 process.on("uncaughtException", function (err) {
-  console.log("err:", err);
+  console.error("uncaughtException:", err);
   process.exit(1);
 });
 
