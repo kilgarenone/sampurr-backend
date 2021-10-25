@@ -257,4 +257,8 @@ process.on("uncaughtException", function (err) {
   process.exit(1);
 });
 
+process.on("SIGINT", function (e) {
+  console.log("holy shit", e);
+});
+
 export default app;
