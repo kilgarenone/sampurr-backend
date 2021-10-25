@@ -139,7 +139,7 @@ app.get("/waveform", async (req, res) => {
 
     res.write(JSON.stringify({ title, thumbnail, duration, id }));
   } catch (err) {
-    console.error(err);
+    console.error("getMediaInfoProcess", err);
 
     if (!err.isCanceled) {
       return res.end(
@@ -179,7 +179,7 @@ app.get("/waveform", async (req, res) => {
       await fs.rename(tempFilePath, filePath);
     }
   } catch (err) {
-    console.error(err);
+    console.error("downloadAudioProcess:", err);
 
     if (!err.isCanceled) {
       return res.end(
@@ -228,7 +228,7 @@ app.get("/waveform", async (req, res) => {
   try {
     await waveformProcess;
   } catch (err) {
-    console.error(err);
+    console.error("waveformProcess:", err);
 
     if (!err.isCanceled) {
       return res.end(
@@ -255,10 +255,6 @@ process.on("unhandledRejection", (reason, p) => {
 process.on("uncaughtException", function (err) {
   console.error("uncaughtException:", err);
   process.exit(1);
-});
-
-process.on("SIGINT", function (e) {
-  console.log("holy shit", e);
 });
 
 export default app;
