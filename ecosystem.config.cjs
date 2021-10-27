@@ -9,6 +9,7 @@ module.exports = {
       merge_logs: true, // all instances of a clustered process logs into the same file when in cluster mode
       time: true, // prefix timestamp to log
       log_date_format: "YYYY-MM-DD HH:mm Z", // format of the logs' timestamp
+      node_args: ["--max_old_space_size=200"],
     },
   ],
 };

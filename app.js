@@ -127,7 +127,7 @@ app.get("/waveform", async (req, res) => {
     // restrict media duration to less than 10 minutes
     const durationArr = duration.split(":");
 
-    if (durationArr.length > 2 || durationArr[0] >= 10) {
+    if (durationArr.length > 2 || (durationArr[1] && durationArr[1] >= 10)) {
       return res.end(
         JSON.stringify({ errorMessage: FILE_TOO_BIG_ERROR_TEMPLATE })
       );
