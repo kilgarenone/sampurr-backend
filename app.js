@@ -79,7 +79,7 @@ app.get("/download", async (req, res) => {
 
 const SOMETHING_WENT_WRONG_ERROR_TEMPLATE = (msg) =>
   `<p>Something went wrong</p><p class="error-desc">${msg}</p>`;
-const FILE_TOO_BIG_ERROR_TEMPLATE = `<p>Wow it's so big</p><p class="error-desc">Try an upload that's less than 10 minutes long</p>`;
+const FILE_TOO_BIG_ERROR_TEMPLATE = `<p>File too big</p><p class="error-desc">Try an upload that's less than 10 minutes long</p>`;
 
 // health check
 app.get("/sup", (req, res) => {
@@ -106,7 +106,6 @@ app.get("/waveform", async (req, res) => {
   res.writeHead(200, {
     "Content-Type": "application/json",
     "X-Accel-Buffering": "no", // this is the key for streaming response with NginX!!
-    // "Cache-Control": "no-cache",
   });
 
   getMediaInfoProcess = execa("yt-dlp", [
@@ -127,7 +126,7 @@ app.get("/waveform", async (req, res) => {
     // restrict media duration to less than 10 minutes
     const durationArr = duration.split(":");
 
-    if (durationArr.length > 2 || (durationArr[1] && durationArr[1] >= 10)) {
+    if (durationArr.length > 2 || (durationArr[1] && durationArr[0] >= 10)) {
       return res.end(
         JSON.stringify({ errorMessage: FILE_TOO_BIG_ERROR_TEMPLATE })
       );
