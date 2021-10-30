@@ -5,6 +5,7 @@ import path from "path";
 import execa from "execa";
 import readline from "readline";
 import { nanoid } from "nanoid/async";
+import { URL } from "url";
 
 import { checkFileExists, getDownloadProgress } from "./functions.js";
 
@@ -87,7 +88,21 @@ app.get("/sup", (req, res) => {
 });
 
 app.get("/waveform", async (req, res) => {
-  const { url } = req.query;
+  let url = req.query.url;
+
+  if (!url) {
+    return res.end("Invalid url.");
+  }
+
+  url = decodeURIComponent(url);
+
+  // validate url format
+  try {
+    new URL(url);
+  } catch (err) {
+    return res.end("Invalid url");
+  }
+
   const tempId = await nanoid(5);
 
   let downloadAudioProcess;
