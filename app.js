@@ -78,9 +78,15 @@ app.get("/download", async (req, res) => {
   }
 });
 
-const SOMETHING_WENT_WRONG_ERROR_TEMPLATE = (msg) =>
-  `<p>Something went wrong</p><p class="error-desc">${msg}</p>`;
-const FILE_TOO_BIG_ERROR_TEMPLATE = `<p>File too big</p><p class="error-desc">Try an upload that's less than 10 minutes long</p>`;
+const SOMETHING_WENT_WRONG_ERROR_TEMPLATE = (error) => `
+  <p>Something went wrong</p>
+  <p class="error-desc">Maybe try again</p>
+  <details>
+      <summary>Error details</summary>
+      ${error}
+  </details>
+`;
+const FILE_TOO_BIG_ERROR_TEMPLATE = `<p>Holy shit</p><p class="error-desc">Try an upload that's less than 10 minutes long</p>`;
 
 // health check
 app.get("/sup", (req, res) => {
@@ -129,6 +135,8 @@ app.get("/waveform", async (req, res) => {
     "--get-thumbnail",
     "--get-duration",
     "--get-id",
+    "--retries",
+    1,
   ]);
 
   try {
@@ -153,8 +161,6 @@ app.get("/waveform", async (req, res) => {
 
     res.write(JSON.stringify({ title, thumbnail, duration, id }));
   } catch (err) {
-    console.error("getMediaInfoProcess", err);
-
     if (!err.isCanceled) {
       return res.end(
         JSON.stringify({
