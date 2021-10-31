@@ -1,12 +1,11 @@
-import express from "express";
 import cors from "cors";
-import { promises as fs } from "fs";
-import path from "path";
 import execa from "execa";
-import readline from "readline";
+import express from "express";
+import { promises as fs } from "fs";
 import { nanoid } from "nanoid/async";
+import path from "path";
+import readline from "readline";
 import { URL } from "url";
-
 import { checkFileExists, getDownloadProgress } from "./functions.js";
 
 const app = express();
@@ -33,7 +32,6 @@ const ALLOWED_ORIGINS = [
 
 app.use(
   cors({
-    credentials: true, // include Access-Control-Allow-Credentials: true. remember set xhr.withCredentials = true;
     origin(origin, callback) {
       // allow requests with no origin
       // (like mobile apps or curl requests)
@@ -74,7 +72,8 @@ app.get("/download", async (req, res) => {
   try {
     await ffmpeg;
   } catch (error) {
-    // TODO: log error
+    console.error("/download error:", error);
+    res.end();
   }
 });
 
@@ -97,7 +96,7 @@ app.get("/waveform", async (req, res) => {
   let url = req.query.url;
 
   if (!url) {
-    return res.end("Invalid url.");
+    return res.end("Invalid url");
   }
 
   url = decodeURIComponent(url);
@@ -175,11 +174,8 @@ app.get("/waveform", async (req, res) => {
 
   try {
     if (!isFileExists) {
-      // TODO: maybe try -f bestaudio
       downloadAudioProcess = execa("yt-dlp", [
         url,
-        // "--audio-quality",
-        // "0",
         "--extract-audio",
         "--audio-format",
         "wav",
@@ -211,7 +207,7 @@ app.get("/waveform", async (req, res) => {
 
     const files = await fs.readdir(tmpPath);
 
-    const filesToBeDeleted = files.map(async (file) => {
+    const filesToBeDeleted = files.map((file) => {
       if (file.indexOf(`${trackID}_${tempId}`) > -1) {
         return fs.unlink(path.join(tmpPath, file));
       }

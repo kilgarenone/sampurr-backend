@@ -13,8 +13,6 @@ export function getDownloadProgress(stringData) {
   const progressObject = {};
 
   progressObject.percent = parseInt(progressMatch[1].replace("%", ""));
-  progressObject.totalSize = progressMatch[2].replace("~", "");
-  progressObject.eta = progressMatch[6];
 
   return progressObject;
 }
