@@ -1,4 +1,3 @@
-import cors from "cors";
 import execa from "execa";
 import express from "express";
 import { promises as fs } from "fs";
@@ -29,23 +28,6 @@ app.use(express.static("tmp"));
 const ALLOWED_ORIGINS = [
   "http://localhost:8008" /* "https://example-prod-app.com */,
 ];
-
-app.use(
-  cors({
-    origin(origin, callback) {
-      // allow requests with no origin
-      // (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      if (ALLOWED_ORIGINS.indexOf(origin) === -1) {
-        const msg =
-          "The CORS policy for this site does not " +
-          "allow access from the specified Origin.";
-        return callback(new Error(msg), false);
-      }
-      return callback(null, true);
-    },
-  })
-);
 
 const tmpPath = path.join(__dirname, "/tmp");
 
