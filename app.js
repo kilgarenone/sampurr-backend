@@ -1,41 +1,41 @@
-import execa from "execa";
-import express from "express";
-import { promises as fs } from "fs";
-import { nanoid } from "nanoid/async";
-import path from "path";
-import readline from "readline";
-import { URL } from "url";
-import { checkFileExists, getDownloadProgress } from "./functions.js";
+import execa from "execa"
+import express from "express"
+import { promises as fs } from "fs"
+import { nanoid } from "nanoid/async"
+import path from "path"
+import readline from "readline"
+import { URL } from "url"
+import { checkFileExists, getDownloadProgress } from "./functions.js"
 
-const app = express();
-const isProduction = app.get("env") === "production";
+const app = express()
+const isProduction = app.get("env") === "production"
 // to fix 'ReferenceError: __dirname is not defined in ES module scope'
-const __dirname = path.resolve();
+const __dirname = path.resolve()
 
 if (isProduction) {
-  app.set("trust proxy", 1);
+  app.set("trust proxy", 1)
 }
 
-app.disable("x-powered-by");
+app.disable("x-powered-by")
 
-app.set("port", process.env.PORT || 4000);
+app.set("port", process.env.PORT || 4000)
 
-app.use(express.json());
+app.use(express.json())
 
-app.use(express.static("tmp"));
+app.use(express.static("tmp"))
 
 // url of your client
 const ALLOWED_ORIGINS = [
   "http://localhost:8008" /* "https://example-prod-app.com */,
-];
+]
 
-const tmpPath = path.join(__dirname, "/tmp");
+const tmpPath = path.join(__dirname, "/tmp")
 
 app.get("/download", async (req, res) => {
-  const { start, end, title, id } = req.query;
+  const { start, end, title, id } = req.query
 
-  res.setHeader("Content-disposition", `attachment; filename=${title}.wav`);
-  res.setHeader("Content-type", "audio/wav");
+  res.setHeader("Content-disposition", `attachment; filename=${title}.wav`)
+  res.setHeader("Content-type", "audio/wav")
 
   const ffmpeg = execa("ffmpeg", [
     "-i",
@@ -47,17 +47,17 @@ app.get("/download", async (req, res) => {
     "-f",
     "wav",
     "pipe:1",
-  ]);
+  ])
 
-  ffmpeg.stdout.pipe(res);
+  ffmpeg.stdout.pipe(res)
 
   try {
-    await ffmpeg;
+    await ffmpeg
   } catch (error) {
-    console.error("/download error:", error);
-    res.end();
+    console.error("/download error:", error)
+    res.end()
   }
-});
+})
 
 const SOMETHING_WENT_WRONG_ERROR_TEMPLATE = (error) => `
   <p>Something went wrong</p>
@@ -66,49 +66,49 @@ const SOMETHING_WENT_WRONG_ERROR_TEMPLATE = (error) => `
       <summary>Error details</summary>
       ${error}
   </details>
-`;
-const FILE_TOO_BIG_ERROR_TEMPLATE = `<p>Holy shit</p><p class="error-desc">Try an upload that's less than 10 minutes long</p>`;
+`
+const FILE_TOO_BIG_ERROR_TEMPLATE = `<p>Holy shit</p><p class="error-desc">Try an upload that's less than 10 minutes long</p>`
 
 // health check
 app.get("/sup", (req, res) => {
-  res.send("sup");
-});
+  res.send("sup")
+})
 
 app.get("/waveform", async (req, res) => {
-  let url = req.query.url;
+  let url = req.query.url
 
   if (!url) {
-    return res.end("Invalid url");
+    return res.end("Invalid url")
   }
 
-  url = decodeURIComponent(url);
+  url = decodeURIComponent(url)
 
   // validate url format
   try {
-    new URL(url);
+    new URL(url)
   } catch (err) {
-    return res.end("Invalid url");
+    return res.end("Invalid url")
   }
 
-  const tempId = await nanoid(5);
+  const tempId = await nanoid(5)
 
-  let downloadAudioProcess;
-  let getMediaInfoProcess;
-  let waveformProcess;
-  let trackID = "";
-  let tempFilePath = "";
-  let filePath = "";
+  let downloadAudioProcess
+  let getMediaInfoProcess
+  let waveformProcess
+  let trackID = ""
+  let tempFilePath = ""
+  let filePath = ""
 
   req.on("aborted", function () {
-    getMediaInfoProcess && getMediaInfoProcess.cancel();
-    downloadAudioProcess && downloadAudioProcess.cancel();
-    waveformProcess && waveformProcess.cancel();
-  });
+    getMediaInfoProcess && getMediaInfoProcess.cancel()
+    downloadAudioProcess && downloadAudioProcess.cancel()
+    waveformProcess && waveformProcess.cancel()
+  })
 
   res.writeHead(200, {
     "Content-Type": "application/json",
     "X-Accel-Buffering": "no", // this is the key for streaming response with NginX!!
-  });
+  })
 
   getMediaInfoProcess = execa("yt-dlp", [
     url,
@@ -118,41 +118,42 @@ app.get("/waveform", async (req, res) => {
     "--get-id",
     "--retries",
     1,
-  ]);
+  ])
 
   try {
-    const { stdout: mediaInfo } = await getMediaInfoProcess;
+    const { stdout: mediaInfo } = await getMediaInfoProcess
 
     const [title, id, thumbnail, duration] = mediaInfo
       .split(/\r|\n/g)
-      .filter(Boolean);
+      .filter(Boolean)
 
     // restrict media duration to less than 10 minutes
-    const durationArr = duration.split(":");
+    const durationArr = duration.split(":")
 
     if (durationArr.length > 2 || (durationArr[1] && durationArr[0] >= 10)) {
       return res.end(
         JSON.stringify({ errorMessage: FILE_TOO_BIG_ERROR_TEMPLATE })
-      );
+      )
     }
 
-    trackID = id;
-    tempFilePath = path.join(__dirname, "tmp", `${trackID}_${tempId}.wav`);
-    filePath = path.join(__dirname, "tmp", `${trackID}.wav`);
+    trackID = id
+    tempFilePath = path.join(__dirname, "tmp", `${trackID}_${tempId}.wav`)
+    filePath = path.join(__dirname, "tmp", `${trackID}.wav`)
 
-    res.write(JSON.stringify({ title, thumbnail, duration, id }));
+    res.write(JSON.stringify({ title, thumbnail, duration, id }))
   } catch (err) {
+    console.log(err)
     if (!err.isCanceled) {
       return res.end(
         JSON.stringify({
           errorMessage: SOMETHING_WENT_WRONG_ERROR_TEMPLATE(err.stderr),
         })
-      );
+      )
     }
-    return res.end();
+    return res.end()
   }
 
-  const isFileExists = await checkFileExists(filePath);
+  const isFileExists = await checkFileExists(filePath)
 
   try {
     if (!isFileExists) {
@@ -163,42 +164,42 @@ app.get("/waveform", async (req, res) => {
         "wav",
         "--output",
         path.join(tmpPath, `${trackID}_${tempId}.%(ext)s`),
-      ]);
+      ])
 
-      const rl = readline.createInterface(downloadAudioProcess.stdout);
+      const rl = readline.createInterface(downloadAudioProcess.stdout)
 
       rl.on("line", (input) => {
-        const progress = getDownloadProgress(input);
-        progress && res.write(JSON.stringify(progress));
-      });
+        const progress = getDownloadProgress(input)
+        progress && res.write(JSON.stringify(progress))
+      })
 
-      await downloadAudioProcess;
+      await downloadAudioProcess
 
-      await fs.rename(tempFilePath, filePath);
+      await fs.rename(tempFilePath, filePath)
     }
   } catch (err) {
-    console.error("downloadAudioProcess:", err);
+    console.error("downloadAudioProcess:", err)
 
     if (!err.isCanceled) {
       return res.end(
         JSON.stringify({
           errorMessage: SOMETHING_WENT_WRONG_ERROR_TEMPLATE(err.stderr),
         })
-      );
+      )
     }
 
-    const files = await fs.readdir(tmpPath);
+    const files = await fs.readdir(tmpPath)
 
     const filesToBeDeleted = files.map((file) => {
       if (file.indexOf(`${trackID}_${tempId}`) > -1) {
-        return fs.unlink(path.join(tmpPath, file));
+        return fs.unlink(path.join(tmpPath, file))
       }
-      return;
-    });
+      return
+    })
 
-    await Promise.all(filesToBeDeleted);
+    await Promise.all(filesToBeDeleted)
 
-    return res.end();
+    return res.end()
   }
 
   res.write(
@@ -206,7 +207,7 @@ app.get("/waveform", async (req, res) => {
       status: "Generating waveform",
       ...(isFileExists ? { percent: "95" } : {}), // keep it in quotes cuz we in FE we split by `"}`
     })
-  );
+  )
 
   waveformProcess = execa("audiowaveform", [
     "-i",
@@ -219,40 +220,40 @@ app.get("/waveform", async (req, res) => {
     20, // try 25
     "--output-format",
     "json",
-  ]);
+  ])
 
-  waveformProcess.stdout.pipe(res);
+  waveformProcess.stdout.pipe(res)
 
   try {
-    await waveformProcess;
+    await waveformProcess
   } catch (err) {
-    console.error("waveformProcess:", err);
+    console.error("waveformProcess:", err)
 
     if (!err.isCanceled) {
       return res.end(
         JSON.stringify({
           errorMessage: SOMETHING_WENT_WRONG_ERROR_TEMPLATE(err.stderr),
         })
-      );
+      )
     }
 
-    res.end();
+    res.end()
   }
-});
+})
 
 process.on("unhandledRejection", (reason, p) => {
-  console.error("unhandledRejection", reason);
+  console.error("unhandledRejection", reason)
   // Error not caught in promises(ie. forgot the 'catch' block) will get swallowed and disappear.
   // I just caught an unhandled promise rejection,
   // since we already have fallback handler for unhandled errors (see below),
   // let throw and let him handle that
-  throw reason;
-});
+  throw reason
+})
 
 // mainly to catch those from third-party lib. for own code, catch it in try/catch
 process.on("uncaughtException", function (err) {
-  console.error("uncaughtException:", err);
-  process.exit(1);
-});
+  console.error("uncaughtException:", err)
+  process.exit(1)
+})
 
-export default app;
+export default app
