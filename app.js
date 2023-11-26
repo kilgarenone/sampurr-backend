@@ -6,6 +6,7 @@ import path from "path"
 import readline from "readline"
 import { URL } from "url"
 import { checkFileExists, getDownloadProgress } from "./functions.js"
+import cors from "cors"
 
 const app = express()
 const isProduction = app.get("env") === "production"
@@ -19,15 +20,10 @@ if (isProduction) {
 app.disable("x-powered-by")
 
 app.set("port", process.env.PORT || 4000)
-
+app.use(cors())
 app.use(express.json())
 
 app.use(express.static("tmp"))
-
-// url of your client
-const ALLOWED_ORIGINS = [
-  "http://localhost:8008" /* "https://example-prod-app.com */,
-]
 
 const tmpPath = path.join(__dirname, "/tmp")
 
