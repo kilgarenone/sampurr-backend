@@ -10,7 +10,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "pm2 start ecosystem.config.cjs --no-daemon",
-    "start": "pm2 start ecosystem.config.cjs",
+    "start": "pm2 start ecosystem.config.cjs --no-daemon",
     "pullAndReload": "git pull && pm2 reload ecosystem.config.cjs"
   },
   "keywords": [],
