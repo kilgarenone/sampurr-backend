@@ -142,7 +142,6 @@ app.get("/waveform", async (req, res) => {
 
     res.write(JSON.stringify({ title, thumbnail, duration, id }))
   } catch (err) {
-    console.log(err)
     if (!err.isCanceled) {
       return res.end(
         JSON.stringify({
@@ -175,6 +174,13 @@ app.get("/waveform", async (req, res) => {
 
       await downloadAudioProcess
 
+      res.write(
+        JSON.stringify({
+          status: "Generating waveform",
+          ...(isFileExists ? { percent: "95" } : {}), // keep it in quotes cuz we in FE we split by `"}`
+        })
+      )
+
       await fs.rename(tempFilePath, filePath)
     }
   } catch (err) {
@@ -201,13 +207,6 @@ app.get("/waveform", async (req, res) => {
 
     return res.end()
   }
-
-  res.write(
-    JSON.stringify({
-      status: "Generating waveform",
-      ...(isFileExists ? { percent: "95" } : {}), // keep it in quotes cuz we in FE we split by `"}`
-    })
-  )
 
   waveformProcess = execa("audiowaveform", [
     "-i",
