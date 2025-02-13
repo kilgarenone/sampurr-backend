@@ -1,26 +1,23 @@
 {
-  "name": "sampurr",
-  "version": "1.0.0",
-  "description": "Sample an audio track from an URL",
-  "main": "server.js",
-  "type": "module",
-  "engines": {
-    "node": "14.x.x"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "pm2 start ecosystem.config.cjs --no-daemon",
-    "start": "pm2 start ecosystem.config.cjs --no-daemon",
-    "pullAndReload": "git pull && pm2 reload ecosystem.config.cjs"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "execa": "^5.1.1",
-    "express": "^4.17.1",
-    "nanoid": "^3.1.29",
-    "pm2": "^5.3.0"
-  }
+    "name": "sampurr",
+    "version": "1.0.0",
+    "description": "Sample an audio track from an URL",
+    "main": "server.js",
+    "type": "module",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "dev": "pm2 start ecosystem.config.cjs --no-daemon",
+        "start": "pm2 start ecosystem.config.cjs --no-daemon",
+        "pullAndReload": "git pull && pm2 reload ecosystem.config.cjs"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "cors": "^2.8.5",
+        "execa": "^5.1.1",
+        "express": "^4.17.1",
+        "nanoid": "^3.1.29",
+        "pm2": "^5.3.0"
+    }
 }
